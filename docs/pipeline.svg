@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 300" width="1180" height="300" role="img" aria-label="pipeline: reference video to handoff package">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#8a94a6"/>
+    </marker>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#f6f8fb"/>
+    </linearGradient>
+  </defs>
+  <style>
+    .box { fill: url(#g); stroke: #d7dee8; stroke-width: 1.4; }
+    .tool { fill: #eef4ff; stroke: #c9dbff; }
+    .agent { fill: #fff6ec; stroke: #f2d6b3; }
+    .out { fill: #f2fbf4; stroke: #bfe3c8; }
+    .t { font: 600 15px -apple-system, "Segoe UI", "PingFang SC", "Noto Sans CJK SC", sans-serif; fill: #1c2430; }
+    .s { font: 12px -apple-system, "Segoe UI", "PingFang SC", "Noto Sans CJK SC", sans-serif; fill: #5d6a7d; }
+    .m { font: 11.5px ui-monospace, SFMono-Regular, Menlo, monospace; fill: #3d6fd4; }
+    .lbl { font: 11px -apple-system, "Segoe UI", "PingFang SC", sans-serif; fill: #7d8698; }
+  </style>
+
+  <!-- row 1 -->
+  <rect class="box" x="18" y="60" width="150" height="92" rx="12"/>
+  <text class="t" x="93" y="92" text-anchor="middle">参考视频</text>
+  <text class="s" x="93" y="112" text-anchor="middle">9:16 · 15–60 s</text>
+  <text class="m" x="93" y="132" text-anchor="middle">reference.mp4</text>
+
+  <rect class="box tool" x="205" y="60" width="196" height="92" rx="12"/>
+  <text class="t" x="303" y="86" text-anchor="middle">① 切镜 → 并段</text>
+  <text class="s" x="303" y="106" text-anchor="middle">cuts / dissolves / wipes / fades</text>
+  <text class="s" x="303" y="124" text-anchor="middle">4–15 s each · ≤ 6 units</text>
+  <text class="m" x="303" y="142" text-anchor="middle">desk.py ingest</text>
+
+  <rect class="box tool" x="438" y="60" width="196" height="92" rx="12"/>
+  <text class="t" x="536" y="86" text-anchor="middle">② 首帧 + 画面统计</text>
+  <text class="s" x="536" y="106" text-anchor="middle">first frame after the transition</text>
+  <text class="s" x="536" y="124" text-anchor="middle">brightness · warmth · camera move</text>
+  <text class="m" x="536" y="142" text-anchor="middle">frames/ · look</text>
+
+  <rect class="box agent" x="671" y="60" width="196" height="92" rx="12"/>
+  <text class="t" x="769" y="86" text-anchor="middle">③ 写配方（AI）</text>
+  <text class="s" x="769" y="106" text-anchor="middle">keyframe / video prompts</text>
+  <text class="s" x="769" y="124" text-anchor="middle">slots · lines · voice</text>
+  <text class="m" x="769" y="142" text-anchor="middle">request.md → vlm.json</text>
+
+  <!-- row 1 arrows -->
+  <g stroke="#8a94a6" stroke-width="1.6" fill="none" marker-end="url(#a)">
+    <path d="M168 106 H203"/>
+    <path d="M401 106 H436"/>
+    <path d="M634 106 H669"/>
+    <path d="M867 106 H902"/>
+  </g>
+  <text class="lbl" x="884" y="96" text-anchor="middle">agent</text>
+
+  <rect class="box tool" x="904" y="60" width="150" height="92" rx="12"/>
+  <text class="t" x="979" y="86" text-anchor="middle">④ 组装配方</text>
+  <text class="s" x="979" y="106" text-anchor="middle">slots → 【槽名】</text>
+  <text class="s" x="979" y="124" text-anchor="middle">steps · durations</text>
+  <text class="m" x="979" y="142" text-anchor="middle">desk.py recipe</text>
+
+  <!-- down to row 2 -->
+  <g stroke="#8a94a6" stroke-width="1.6" fill="none" marker-end="url(#a)">
+    <path d="M979 152 V196 H812"/>
+  </g>
+
+  <!-- row 2 (right to left) -->
+  <rect class="box out" x="618" y="196" width="190" height="86" rx="12"/>
+  <text class="t" x="713" y="222" text-anchor="middle">交付包</text>
+  <text class="s" x="713" y="242" text-anchor="middle">template.json · AGENT.md</text>
+  <text class="s" x="713" y="260" text-anchor="middle">flow.html · frames/ · zip</text>
+  <text class="m" x="713" y="276" text-anchor="middle">desk.py package</text>
+
+  <g stroke="#8a94a6" stroke-width="1.6" fill="none" marker-end="url(#a)">
+    <path d="M616 240 H556"/>
+  </g>
+
+  <rect class="box agent" x="358" y="196" width="196" height="86" rx="12"/>
+  <text class="t" x="456" y="222" text-anchor="middle">执行 agent</text>
+  <text class="s" x="456" y="242" text-anchor="middle">image → video, per unit</text>
+  <text class="s" x="456" y="260" text-anchor="middle">speed-fit, then assemble</text>
+  <text class="m" x="456" y="276" text-anchor="middle">any image / video model</text>
+
+  <g stroke="#c8d0dc" stroke-width="1.4" stroke-dasharray="5 4" fill="none" marker-end="url(#a)">
+    <path d="M356 240 H300"/>
+  </g>
+
+  <rect class="box" x="18" y="196" width="280" height="86" rx="12"/>
+  <text class="t" x="158" y="222" text-anchor="middle">成片</text>
+  <text class="s" x="158" y="244" text-anchor="middle">same shot order, same pacing,</text>
+  <text class="s" x="158" y="262" text-anchor="middle">your product, your lines</text>
+
+  <text class="lbl" x="18" y="34">this skill</text>
+  <text class="lbl" x="650" y="34">the agent that uses it</text>
+  <text class="lbl" x="18" y="182">generation is out of scope — the package is the deliverable</text>
+</svg>

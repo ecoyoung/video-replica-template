@@ -1,0 +1,383 @@
+{
+  "id": "tpl-d72a8f0bd22b",
+  "appId": "tpl-d72a8f0bd22b",
+  "name": "GLOW 卸妆膏 · 演示",
+  "desc": "暖调慢节奏的卸妆膏广告模板",
+  "coverUrl": "frames/u1-first.jpg",
+  "previewM3u8": "",
+  "useCount": 0,
+  "needImage": true,
+  "slots": [
+    {
+      "key": "s1",
+      "title": "背景色",
+      "default": "暖米色"
+    }
+  ],
+  "aspectRatio": "9:16",
+  "tags": [
+    "模板",
+    "按镜头复刻"
+  ],
+  "origin": "template",
+  "mode": "replica",
+  "category": "美妆",
+  "status": "ready",
+  "createdAt": "2026-11-13T02:52:59Z",
+  "replica": {
+    "duration": 20.5,
+    "width": 720,
+    "height": 1280,
+    "fps": 30.0,
+    "hasAudio": false,
+    "voice": "年轻女声，轻柔、语速偏慢",
+    "language": "",
+    "voiceId": "",
+    "bgmUrl": "",
+    "units": [
+      {
+        "start": 0.0,
+        "end": 5.5,
+        "duration": 5.5,
+        "generate": 6,
+        "transitionIn": "start",
+        "shots": [
+          {
+            "start": 0.0,
+            "end": 5.5,
+            "transition": "start"
+          }
+        ],
+        "index": 1,
+        "look": {
+          "brightness": 79.7,
+          "contrast": 8.7,
+          "saturation": 15.9,
+          "warmth": 13.3,
+          "motion": "static",
+          "motionStrength": 1.3
+        },
+        "frameTime": 0.05,
+        "refUrl": "frames/u1-first.jpg"
+      },
+      {
+        "start": 5.5,
+        "end": 10.5,
+        "duration": 5.0,
+        "generate": 5,
+        "transitionIn": "cut",
+        "shots": [
+          {
+            "start": 0.0,
+            "end": 5.0,
+            "transition": "cut"
+          }
+        ],
+        "index": 2,
+        "look": {
+          "brightness": 88.6,
+          "contrast": 7.0,
+          "saturation": 8.3,
+          "warmth": 7.4,
+          "motion": "static",
+          "motionStrength": 0.7
+        },
+        "frameTime": 5.55,
+        "refUrl": "frames/u2-first.jpg"
+      },
+      {
+        "start": 10.5,
+        "end": 16.0,
+        "duration": 5.5,
+        "generate": 6,
+        "transitionIn": "cut",
+        "shots": [
+          {
+            "start": 0.0,
+            "end": 5.5,
+            "transition": "cut"
+          }
+        ],
+        "index": 3,
+        "look": {
+          "brightness": 86.4,
+          "contrast": 5.8,
+          "saturation": 9.7,
+          "warmth": 8.6,
+          "motion": "static",
+          "motionStrength": 1.2
+        },
+        "frameTime": 10.55,
+        "refUrl": "frames/u3-first.jpg"
+      },
+      {
+        "start": 16.0,
+        "end": 20.5,
+        "duration": 4.5,
+        "generate": 5,
+        "transitionIn": "cut",
+        "shots": [
+          {
+            "start": 0.0,
+            "end": 4.5,
+            "transition": "cut"
+          }
+        ],
+        "index": 4,
+        "look": {
+          "brightness": 21.2,
+          "contrast": 20.4,
+          "saturation": 35.2,
+          "warmth": -6.4,
+          "motion": "static",
+          "motionStrength": 0.8
+        },
+        "frameTime": 16.05,
+        "refUrl": "frames/u4-first.jpg"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "u1-frame",
+      "kind": "i2i",
+      "title": "1·产品特写 首帧",
+      "imageFrom": "ref",
+      "refUrl": "frames/u1-first.jpg",
+      "withProduct": true,
+      "unit": 1,
+      "prompt": "以参考图 1 的构图、机位、景别和光线为准出一张静帧，把画面里的产品换成参考图 2 的产品，保持参考图 2 产品的外形、颜色和 logo，不要变形。画面不要字幕。\n9:16 竖构图，【背景色】渐变背景，画面正中偏下摆着一罐【背景色】包装的【产品名】，磨砂膏体、深色盖子，左上方留出两行标题位置，柔和的左上方主光在罐身留下一条高光，地面有淡阴影。",
+      "aspectRatio": "9:16"
+    },
+    {
+      "id": "u1-video",
+      "kind": "i2v",
+      "title": "1·产品特写 5.5s",
+      "imageFrom": "prev",
+      "unit": 1,
+      "duration": 6,
+      "targetDuration": 5.5,
+      "prompt": "固定机位微微推近，产品静止，高光在罐身上缓慢移动，光线保持柔和，结尾停在产品特写。\n产品保持外形和 logo，不要跳帧，画面不要字幕。声音只要人声口播和现场环境音，不要背景音乐。",
+      "line": "",
+      "aspectRatio": "9:16"
+    },
+    {
+      "id": "u2-frame",
+      "kind": "i2i",
+      "title": "2·质地展示 首帧",
+      "imageFrom": "ref",
+      "refUrl": "frames/u2-first.jpg",
+      "withProduct": true,
+      "unit": 2,
+      "prompt": "以参考图 1 的构图、机位、景别和光线为准出一张静帧，把画面里的产品换成参考图 2 的产品，保持参考图 2 产品的外形、颜色和 logo，不要变形。画面不要字幕。\n9:16 竖构图，浅米色背景，台面上并排三团不同厚度的乳霜质地，从稠到薄，侧逆光让质地边缘透亮，上方留出标题空间。",
+      "aspectRatio": "9:16"
+    },
+    {
+      "id": "u2-video",
+      "kind": "i2v",
+      "title": "2·质地展示 5.0s",
+      "imageFrom": "prev",
+      "unit": 2,
+      "duration": 5,
+      "targetDuration": 5.0,
+      "prompt": "镜头缓慢拉远并轻微下移，乳霜表面反光轻轻变化，不要出现手，结尾三团质地完整入画。\n产品保持外形和 logo，不要跳帧，画面不要字幕。声音只要人声口播和现场环境音，不要背景音乐。",
+      "line": "",
+      "aspectRatio": "9:16"
+    },
+    {
+      "id": "u3-frame",
+      "kind": "i2i",
+      "title": "3·前后对比 首帧",
+      "imageFrom": "ref",
+      "refUrl": "frames/u3-first.jpg",
+      "withProduct": true,
+      "unit": 3,
+      "prompt": "以参考图 1 的构图、机位、景别和光线为准出一张静帧，把画面里的产品换成参考图 2 的产品，保持参考图 2 产品的外形、颜色和 logo，不要变形。画面不要字幕。\n9:16 竖构图，画面中间一条白色分割线，左右各一张侧脸特写，左侧肤色暗沉带残妆，右侧干净透亮，背景为【背景色】。",
+      "aspectRatio": "9:16"
+    },
+    {
+      "id": "u3-video",
+      "kind": "i2v",
+      "title": "3·前后对比 5.5s",
+      "imageFrom": "prev",
+      "unit": 3,
+      "duration": 6,
+      "targetDuration": 5.5,
+      "prompt": "镜头固定，左右两张脸同时轻微转头，光线保持均匀，不要切换镜头，结尾停在干净透亮的右侧。\n产品保持外形和 logo，不要跳帧，画面不要字幕。声音只要人声口播和现场环境音，不要背景音乐。",
+      "line": "",
+      "aspectRatio": "9:16"
+    },
+    {
+      "id": "u4-frame",
+      "kind": "i2i",
+      "title": "4·品牌收尾 首帧",
+      "imageFrom": "ref",
+      "refUrl": "frames/u4-first.jpg",
+      "withProduct": true,
+      "unit": 4,
+      "prompt": "以参考图 1 的构图、机位、景别和光线为准出一张静帧，把画面里的产品换成参考图 2 的产品，保持参考图 2 产品的外形、颜色和 logo，不要变形。画面不要字幕。\n9:16 竖构图，深蓝灰渐变背景，画面中央是【背景色】包装的【产品名】正视图，下方一行品牌名，整体压暗、留白多。",
+      "aspectRatio": "9:16"
+    },
+    {
+      "id": "u4-video",
+      "kind": "i2v",
+      "title": "4·品牌收尾 4.5s",
+      "imageFrom": "prev",
+      "unit": 4,
+      "duration": 5,
+      "targetDuration": 4.5,
+      "prompt": "固定机位，产品静止，背景有一束微弱的光从上往下扫过，结尾停住。\n产品保持外形和 logo，不要跳帧，画面不要字幕。声音只要人声口播和现场环境音，不要背景音乐。",
+      "line": "",
+      "aspectRatio": "9:16"
+    },
+    {
+      "id": "assemble",
+      "kind": "assemble",
+      "title": "按原片时间线拼接",
+      "audio": "generated",
+      "prompt": ""
+    }
+  ],
+  "sourceRecipeId": "draft-b8a8fe6a6e7f",
+  "handoff": {
+    "schema": "video-replica-handoff",
+    "version": 1,
+    "instructions": "AGENT.md",
+    "diagram": "flow.html",
+    "inputs": {
+      "productImage": "required",
+      "slots": [
+        {
+          "key": "s1",
+          "title": "背景色",
+          "default": "暖米色"
+        }
+      ]
+    },
+    "output": {
+      "width": 720,
+      "height": 1280,
+      "aspectRatio": "9:16",
+      "duration": 20.5,
+      "fpsMax": 30
+    },
+    "units": [
+      {
+        "index": 1,
+        "sourceStart": 0.0,
+        "sourceEnd": 5.5,
+        "targetDuration": 5.5,
+        "frame": {
+          "step": "u1-frame",
+          "kind": "image-to-image",
+          "references": [
+            "frames/u1-first.jpg",
+            "<productImage>"
+          ],
+          "prompt": "以参考图 1 的构图、机位、景别和光线为准出一张静帧，把画面里的产品换成参考图 2 的产品，保持参考图 2 产品的外形、颜色和 logo，不要变形。画面不要字幕。\n9:16 竖构图，【背景色】渐变背景，画面正中偏下摆着一罐【背景色】包装的【产品名】，磨砂膏体、深色盖子，左上方留出两行标题位置，柔和的左上方主光在罐身留下一条高光，地面有淡阴影。",
+          "aspectRatio": "9:16"
+        },
+        "video": {
+          "step": "u1-video",
+          "kind": "image-to-video",
+          "firstFrame": "<output of u1-frame>",
+          "duration": 6,
+          "prompt": "固定机位微微推近，产品静止，高光在罐身上缓慢移动，光线保持柔和，结尾停在产品特写。\n产品保持外形和 logo，不要跳帧，画面不要字幕。声音只要人声口播和现场环境音，不要背景音乐。",
+          "line": "",
+          "aspectRatio": "9:16"
+        }
+      },
+      {
+        "index": 2,
+        "sourceStart": 5.5,
+        "sourceEnd": 10.5,
+        "targetDuration": 5.0,
+        "frame": {
+          "step": "u2-frame",
+          "kind": "image-to-image",
+          "references": [
+            "frames/u2-first.jpg",
+            "<productImage>"
+          ],
+          "prompt": "以参考图 1 的构图、机位、景别和光线为准出一张静帧，把画面里的产品换成参考图 2 的产品，保持参考图 2 产品的外形、颜色和 logo，不要变形。画面不要字幕。\n9:16 竖构图，浅米色背景，台面上并排三团不同厚度的乳霜质地，从稠到薄，侧逆光让质地边缘透亮，上方留出标题空间。",
+          "aspectRatio": "9:16"
+        },
+        "video": {
+          "step": "u2-video",
+          "kind": "image-to-video",
+          "firstFrame": "<output of u2-frame>",
+          "duration": 5,
+          "prompt": "镜头缓慢拉远并轻微下移，乳霜表面反光轻轻变化，不要出现手，结尾三团质地完整入画。\n产品保持外形和 logo，不要跳帧，画面不要字幕。声音只要人声口播和现场环境音，不要背景音乐。",
+          "line": "",
+          "aspectRatio": "9:16"
+        }
+      },
+      {
+        "index": 3,
+        "sourceStart": 10.5,
+        "sourceEnd": 16.0,
+        "targetDuration": 5.5,
+        "frame": {
+          "step": "u3-frame",
+          "kind": "image-to-image",
+          "references": [
+            "frames/u3-first.jpg",
+            "<productImage>"
+          ],
+          "prompt": "以参考图 1 的构图、机位、景别和光线为准出一张静帧，把画面里的产品换成参考图 2 的产品，保持参考图 2 产品的外形、颜色和 logo，不要变形。画面不要字幕。\n9:16 竖构图，画面中间一条白色分割线，左右各一张侧脸特写，左侧肤色暗沉带残妆，右侧干净透亮，背景为【背景色】。",
+          "aspectRatio": "9:16"
+        },
+        "video": {
+          "step": "u3-video",
+          "kind": "image-to-video",
+          "firstFrame": "<output of u3-frame>",
+          "duration": 6,
+          "prompt": "镜头固定，左右两张脸同时轻微转头，光线保持均匀，不要切换镜头，结尾停在干净透亮的右侧。\n产品保持外形和 logo，不要跳帧，画面不要字幕。声音只要人声口播和现场环境音，不要背景音乐。",
+          "line": "",
+          "aspectRatio": "9:16"
+        }
+      },
+      {
+        "index": 4,
+        "sourceStart": 16.0,
+        "sourceEnd": 20.5,
+        "targetDuration": 4.5,
+        "frame": {
+          "step": "u4-frame",
+          "kind": "image-to-image",
+          "references": [
+            "frames/u4-first.jpg",
+            "<productImage>"
+          ],
+          "prompt": "以参考图 1 的构图、机位、景别和光线为准出一张静帧，把画面里的产品换成参考图 2 的产品，保持参考图 2 产品的外形、颜色和 logo，不要变形。画面不要字幕。\n9:16 竖构图，深蓝灰渐变背景，画面中央是【背景色】包装的【产品名】正视图，下方一行品牌名，整体压暗、留白多。",
+          "aspectRatio": "9:16"
+        },
+        "video": {
+          "step": "u4-video",
+          "kind": "image-to-video",
+          "firstFrame": "<output of u4-frame>",
+          "duration": 5,
+          "prompt": "固定机位，产品静止，背景有一束微弱的光从上往下扫过，结尾停住。\n产品保持外形和 logo，不要跳帧，画面不要字幕。声音只要人声口播和现场环境音，不要背景音乐。",
+          "line": "",
+          "aspectRatio": "9:16"
+        }
+      }
+    ],
+    "assembly": {
+      "order": "by unit index",
+      "speedRange": [
+        0.8,
+        3.0
+      ],
+      "fit": "scale-crop-fill",
+      "useReferenceAudio": false,
+      "bgmVolume": 0.35
+    },
+    "rules": [
+      "slot placeholders 【槽名】 / 【key】 / 【】 must be filled before any generation",
+      "rewrite lines when slot values change, then put them back inside 「」 in each video prompt",
+      "image step first, then image-to-video with that image as the first frame; never send the whole reference video to a generator",
+      "use the template aspect ratio for every step"
+    ]
+  }
+}
