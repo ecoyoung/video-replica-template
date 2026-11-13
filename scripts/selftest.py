@@ -142,10 +142,11 @@ ANSWER = {"desc": "d", "needImage": True, "aspectRatio": "9:16", "product": {"na
                                     {"title": "收尾", "keyframe": "spoon 搅拌", "video": "固定", "line": ""}]}
 
 
-def build():
+def build(product_refs=1, roles=None):
     seen = rcp.slotify_fallback(rcp.drop_product_slots(rcp.normalize_units_answer(ANSWER, UNITS)))
     return rcp.build_recipe("draft-x", "T", "source/a.mp4", {"duration": 8, "aspectRatio": "9:16"}, UNITS,
-                            ["frames/u1-first.jpg", "frames/u2-first.jpg"], seen)
+                            ["frames/u1-first.jpg", "frames/u2-first.jpg"], seen,
+                            product_refs=product_refs, product_roles=roles)
 
 
 def t_count():
@@ -161,6 +162,8 @@ def t_product_slots():
     seen = rcp.drop_product_slots(rcp.normalize_units_answer(ANSWER, UNITS))
     titles = {s["title"]: s.get("default") for s in seen["slots"]}
     assert "产品" not in titles and titles["道具"] == "spoon", titles
+    dropped = seen.get("droppedProductSlots") or {}
+    assert "产品" in (dropped.get("slots") or []), dropped  # silent drops confuse people: report them
 
 
 def t_build():
@@ -197,6 +200,38 @@ def t_template():
     assert tpl["replica"]["duration"] == 5 and tpl["sampleUrl"] == "jobs/j1/remake.mp4" and tpl["coverUrl"] == "jobs/j1/u1-frame.png"
 
 
+def t_product_refs():
+    one = build()
+    assert one["productRefs"] == {"count": 1, "roles": ["整体外观"]}, one["productRefs"]
+    assert one["steps"][0]["prompt"].startswith(rcp.KEYFRAME_HEAD + rcp.KEYFRAME_PRODUCT)
+
+    three = build(product_refs=3, roles=["整体外观", "膏体质地", "背面成分表"])
+    assert three["productRefs"]["count"] == 3 and three["steps"][0]["productRefs"] == 3, three["productRefs"]
+    head = three["steps"][0]["prompt"]
+    assert "参考图 2 至参考图 4 的产品" in head and "参考图 3 是膏体质地" in head and "参考图 4 是背面成分表" in head, head
+
+    wd = Path(tempfile.mkdtemp())
+    (wd / "frames").mkdir()
+    for k in (1, 2):
+        (wd / "frames" / f"u{k}-first.jpg").write_bytes(b"jpg")
+    (wd / "source").mkdir()
+    (wd / "source" / "a.mp4").write_bytes(b"mp4")
+    pkg = handoff.build_package(wd, three, wd / "export", "多图模板")
+    folder = Path(pkg["folder"])
+    tpl = json.loads((folder / "template.json").read_text(encoding="utf-8"))
+    inputs = tpl["handoff"]["inputs"]
+    assert inputs["productImages"] == {"count": 3, "min": 1, "max": 3, "roles": ["整体外观", "膏体质地", "背面成分表"]}, inputs
+    assert tpl["handoff"]["units"][0]["frame"]["references"] == [
+        "frames/u1-first.jpg", "<productImage>", "<productImage:2>", "<productImage:3>"], tpl["handoff"]["units"][0]["frame"]
+    md = (folder / "AGENT.md").read_text(encoding="utf-8")
+    for needle in ("共 3 张", "参考图 2–4（产品）", "整体外观 → 膏体质地 → 背面成分表"):
+        assert needle in md, needle
+    page = (folder / "flow.html").read_text(encoding="utf-8")
+    data = json.loads(re.search(r'<script type="application/json" id="data">(.*?)</script>', page, re.S).group(1).replace("<\\/", "</"))
+    refs = next(n["refs"] for n in data["nodes"] if n["id"] == "u1-frame")
+    assert len(refs) == 4 and "膏体质地" in refs[2], refs
+
+
 def t_whole():
     seen = rcp.normalize_recipe({"needImage": True, "shots": [{"kind": "t2i", "title": "a", "prompt": "p"}, {"kind": "i2v", "title": "b", "prompt": "q", "duration": 6}]})
     r = rcp.build_whole_recipe("draft-w", "W", "source/a.mp4", "", seen)
@@ -206,6 +241,7 @@ def t_whole():
 for name, fn in [("unit count must match the shot table", t_count), ("product never stays a slot", t_product_slots),
                  ("recipe steps, keyframe head, slot markers, voice line", t_build), ("slot stitching", t_stitch),
                  ("leftover original values are reported", t_leftover), ("save as template: keep/rename/drop slots, keep units", t_template),
+                 ("one product image by default, up to three with roles", t_product_refs),
                  ("whole-video fallback chain", t_whole)]:
     check(name, fn)
 

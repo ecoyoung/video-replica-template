@@ -44,10 +44,13 @@ replica-work/
 
 ```
 { schema: "video-replica-handoff", version: 1, instructions: "AGENT.md", diagram: "flow.html",
-  inputs: { productImage: "required"|"none", slots: [{key, title, default}] },
+  inputs: { productImage: "required"|"none",
+            productImages: { count: 1|2|3, min: 1, max: 3, roles: ["整体外观", …] },   // needImage 时才有
+            slots: [{key, title, default}] },
   output: { width, height, aspectRatio, duration, fpsMax: 30 },
   units: [{ index, sourceStart, sourceEnd, targetDuration,
-            frame: { step, kind: "image-to-image", references: ["frames/u1-first.jpg", "<productImage>"], prompt, aspectRatio },
+            frame: { step, kind: "image-to-image",
+                     references: ["frames/u1-first.jpg", "<productImage>", "<productImage:2>", "<productImage:3>"], prompt, aspectRatio },
             video: { step, kind: "image-to-video", firstFrame: "<output of u1-frame>", duration, prompt, line, aspectRatio } }],
   assembly: { order: "by unit index", speedRange: [0.8, 3], fit: "scale-crop-fill", useReferenceAudio: false, bgmVolume: 0.35 },
   rules: [...] }
@@ -57,3 +60,17 @@ replica-work/
 
 `transcript_json=[{"start": 0.2, "end": 3.0, "text": "…"}]`（秒），或 `.srt` / `.vtt` / `.json` / `.tsv`（毫秒）。
 一句跨两段时按重叠时长把词切开；沾边不到 25% 的段不分词。语言自动识别为 zh / en / es。
+
+## 产品图 1–3 张
+
+产品外形只来自上传的产品图，所以图越多，模型猜得越少：正面决定外形、颜色、logo，第 2 张补质地，第 3 张补背面或成分表。
+
+```bash
+python3 scripts/desk.py recipe WD --vlm vlm.json --product-images 3 --product-roles "整体外观,膏体质地,背面成分表"
+```
+
+- 张数写进 `recipe.productRefs = {count, roles}`，随模板进 `template.json`，`handoff.inputs.productImages` 同源。
+- 首帧参考图变成 `[frames/u1-first.jpg, "<productImage>", "<productImage:2>", "<productImage:3>"]`；只给 1 张时仍是 `[首帧, "<productImage>"]`，与旧包兼容。
+- 首帧提示词按张数改写：「参考图 2 至参考图 4 的产品（同一款产品：以参考图 2 为准，参考图 3 是膏体质地、参考图 4 是背面成分表）…不要把几张图混成新的包装」。
+- `package` 读配方里的张数，不用再传参数；改张数就重跑 `recipe`。
+- **产品仍然不做槽位**：`product / 商品 / 产品名 / 主产品` 以及槽值里被判定为产品原型的条目会被丢掉，`recipe` 的 `warnings` 会说明原因。外形细节请拍进产品图，不要用文字描述。

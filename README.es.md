@@ -118,7 +118,7 @@ para que lo lea un agente.
 | `desk.py doctor` | comprueba el entorno: python, ffmpeg, detector activo |
 | `desk.py ingest VIDEO WD [--name N] [--max-units 6]` | detección → unidades → primeros fotogramas → `request.md` |
 | `desk.py speech WD --transcript f.json` | añade una voz en off con marcas de tiempo (srt / vtt / json / tsv) |
-| `desk.py recipe WD --vlm vlm.json` | valida la respuesta del agente y construye la plantilla |
+| `desk.py recipe WD --vlm vlm.json [--product-images 1-3]` | valida la respuesta del agente y construye la plantilla; con 2–3 fotos (frontal / textura / trasera) el modelo adivina menos |
 | `desk.py package WD --out DIR [--units 1,2] [--slots …]` | genera el paquete de entrega + zip |
 | `desk.py status WD` | en qué punto del proceso está el directorio de trabajo |
 

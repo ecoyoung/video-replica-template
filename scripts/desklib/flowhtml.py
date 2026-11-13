@@ -10,10 +10,19 @@ import html
 import json
 import re
 
+from desklib import recipe as rcp
+
 COL = 250
 ROW = 250
 PAD_X, PAD_Y = 24, 56
 NODE_W = 210
+
+
+def _product_labels(tpl: dict, frame: dict) -> list[str]:
+    if not frame.get("withProduct"):
+        return []
+    count, roles = rcp.product_ref_info(tpl)
+    return [f"参考图 {i + 2}：产品（{roles[i]}）" for i in range(count)]
 
 
 def _uses(prompt: str, slot: dict, slots: list[dict]) -> bool:
@@ -49,7 +58,7 @@ def graph(tpl: dict) -> dict:
                           "x": PAD_X + COL * col0, "y": top, "image": frame.get("refUrl") or unit.get("refUrl") or "",
                           "meta": f"原片 {unit['start']}–{unit['end']}s · {tpl.get('aspectRatio')}",
                           "prompt": frame.get("prompt") or "",
-                          "refs": ["参考图 1：原片首帧（构图 / 机位 / 景别 / 光线）"] + (["参考图 2：产品图"] if frame.get("withProduct") else [])})
+                          "refs": ["参考图 1：原片首帧（构图 / 机位 / 景别 / 光线）"] + _product_labels(tpl, frame)})
             if frame.get("withProduct") and tpl.get("needImage"):
                 edges.append({"from": "in-image", "to": frame["id"], "tone": "image"})
             edges += [{"from": f"in-slot-{s['key']}", "to": frame["id"], "tone": "slot"} for s in slots if _uses(frame.get("prompt"), s, slots)]
