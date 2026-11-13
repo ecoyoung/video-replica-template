@@ -10,7 +10,7 @@
 
 **Convierte un vídeo de referencia en una plantilla de réplica plano a plano que otro agente puede ejecutar tal cual.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-2ea44f.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-3776ab.svg)](https://www.python.org/)
 [![ffmpeg required](https://img.shields.io/badge/ffmpeg-required-007808.svg)](https://ffmpeg.org/)
 [![no API key](https://img.shields.io/badge/API%20key-none-6f42c1.svg)](#requisitos)
@@ -192,8 +192,8 @@ CI ejecuta la suite en Python 3.9 y 3.12, con y sin OpenCV.
 
 ## Licencia
 
-MIT. El clip de demostración es sintético y lo genera un script de este repositorio; no incluye material ni
-código de terceros.
+Apache-2.0. El clip de demostración es sintético y lo genera un script de este repositorio; no incluye
+material ni código de terceros. Consulta `NOTICE` para la atribución.
 
 <div align="center">
 

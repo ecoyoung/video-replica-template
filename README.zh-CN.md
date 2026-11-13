@@ -10,7 +10,7 @@
 
 **把一条参考短视频，拆成另一个 agent 照着就能执行的复刻模板。**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-2ea44f.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-3776ab.svg)](https://www.python.org/)
 [![ffmpeg required](https://img.shields.io/badge/ffmpeg-required-007808.svg)](https://ffmpeg.org/)
 [![no API key](https://img.shields.io/badge/API%20key-none-6f42c1.svg)](#环境要求)
@@ -169,7 +169,7 @@ CI 在 Python 3.9 和 3.12 上各跑一遍，有 OpenCV 和无 OpenCV 各一遍�
 
 ## 许可
 
-MIT。演示片是脚本合成、随仓库生成；不含任何第三方视频或代码。
+Apache-2.0。演示片是脚本合成、随仓库生成；不含任何第三方视频或代码。署名信息见 `NOTICE`。
 
 <div align="center">
 

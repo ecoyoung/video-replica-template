@@ -10,7 +10,7 @@
 
 **参考動画を、別のエージェントがそのまま実行できる「複製テンプレート」に変換します。**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-2ea44f.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-3776ab.svg)](https://www.python.org/)
 [![ffmpeg required](https://img.shields.io/badge/ffmpeg-required-007808.svg)](https://ffmpeg.org/)
 [![no API key](https://img.shields.io/badge/API%20key-none-6f42c1.svg)](#動作環境)
@@ -188,7 +188,8 @@ CI は Python 3.9 と 3.12、OpenCV あり/なしの計 3 ジョブで回して�
 
 ## ライセンス
 
-MIT。デモ動画はこのリポジトリのスクリプトで合成したもので、第三者の映像やコードは含みません。
+Apache-2.0。デモ動画はこのリポジトリのスクリプトで合成したもので、第三者の映像やコードは含みません。
+帰属表示は `NOTICE` を参照してください。
 
 <div align="center">
 
