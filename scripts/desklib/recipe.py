@@ -52,9 +52,11 @@ def instructions(name: str, units: list[dict], meta: dict) -> str:
         "按这个结构输出：\n"
         '{"desc":"一句话说这条片子拍了什么","needImage":true,"aspectRatio":"9:16",'
         '"product":{"name":"片子里展示的产品（品牌+品类）","aliases":["画面或口播里对它的其他叫法"]},'
+        '"products":[{"name":"片子里出现的每一件产品（品类）","where":"它在画面里的位置，如 画面右侧 / 手边"}],'
         '"slots":[{"title":"槽名","default":"参考片里的原文"}],'
         '"voice":"口播的声音：性别、年龄感、语气，如「年轻女声，轻快」（看画面里的人推断，看不出写自然人声）；没有口播给空字符串",'
-        f'"units":[{{"title":"不超过 8 个字","keyframe":"首帧静帧提示词","video":"视频提示词","line":"这一段的口播台词"}}]}}\n'
+        f'"units":[{{"title":"不超过 8 个字","keyframe":"首帧静帧提示词","video":"视频提示词","line":"这一段的口播台词",'
+        f'"products":["这一段画面里出现的产品，和上面 products 的 name 对应"]}}]}}\n'
         f"规则：\n"
         f"1. units 必须正好 {len(units)} 个，顺序和上表一致，不要合并或拆分。\n"
         "2. keyframe：照这一段首帧写一张静帧——景别、机位角度、构图、场景、光线、人物和产品的位置。"
@@ -63,6 +65,9 @@ def instructions(name: str, units: list[dict], meta: dict) -> str:
         "段里有多个镜头时按「镜头1（0.0–1.4s）：…；镜头2（1.4–3.2s）：…」逐个写，最后一句写这一段的结束状态。\n"
         "4. 片子在展示一个可以换成别家产品的商品时 needImage 为 true：产品本身只写「上传的产品」，"
         "不要写参考片里产品的颜色、包装和品牌；场景里的颜色照写。没有可替换的商品时 needImage 为 false。\n"
+        "9. 一段画面里同时出现两件以上产品（卸妆膏和化妆棉同框、双支套装并排）时，每件都单独列进 products 并写清位置；"
+        "这一段的 products 按画面从左到右把它们列全。工具会给每件产品各配一张参考图，"
+        "提示词里写「把画面里的产品换成参考图 2 / 参考图 3 的产品」。只有一件产品时 products 只写一个名字。\n"
         "5. 这条片子要做成可复用的模板：换产品时通常要跟着换的具体内容抽成 slots，最多 5 个。"
         "优先考虑：食材/配料、道具、场景/背景、人物外观、口播台词。"
         "槽名 2–4 个字（如 食材、道具、场景），default 填参考片里的原值；"
@@ -199,13 +204,44 @@ def normalize_units_answer(value: dict, units: list[dict]) -> dict:
             "keyframe": keyframe or video,
             "video": video or keyframe,
             "line": str(row.get("line") or "").strip()[:400],
+            "products": _product_names(row.get("products")),
         })
     base = normalize_recipe({**value, "shots": [{"kind": "i2v", "title": "x", "prompt": "x"}]})
     product = value.get("product") if isinstance(value.get("product"), dict) else {}
     names = [product.get("name"), *(product.get("aliases") or [])] if product else []
     terms = [str(n).strip()[:40] for n in names if isinstance(n, str) and len(str(n).strip()) >= 2][:8]
     voice = str(value.get("voice") or "").strip()[:60]
-    return {**base, "units": out_units, "productTerms": terms, "voice": voice}
+    # product.name + aliases are one product (aliases are other names for it); distinct products come from "products"
+    products = _product_rows(value.get("products")) or ([{"label": names[0], "where": ""}] if names else [])
+    return {**base, "units": out_units, "products": products[:PRODUCT_MAX],
+            "productTerms": list(dict.fromkeys([p["label"] for p in products if p["label"]] + terms)), "voice": voice}
+
+
+def _product_names(value) -> list[str]:
+    """Per-unit product names: ["卸妆膏", "化妆棉"] or [{"name": "卸妆膏"}]."""
+    rows = value if isinstance(value, list) else []
+    out = []
+    for item in rows:
+        name = item.get("name") if isinstance(item, dict) else item
+        name = str(name or "").strip()[:20]
+        if name and name not in out:
+            out.append(name)
+    return out[:PRODUCT_MAX]
+
+
+def _product_rows(value) -> list[dict]:
+    """Top-level products: [{"name": …, "where": …}] or ["卸妆膏"]."""
+    rows = value if isinstance(value, list) else []
+    out = []
+    for item in rows:
+        if isinstance(item, dict):
+            label = str(item.get("name") or item.get("label") or "").strip()[:20]
+            where = str(item.get("where") or "").strip()[:16]
+        else:
+            label, where = str(item or "").strip()[:20], ""
+        if label or where:
+            out.append({"label": label, "where": where})
+    return out[:PRODUCT_MAX]
 
 
 PRODUCT_SLOT_TITLES = {"产品", "商品", "产品名", "商品名", "主产品"}
@@ -301,46 +337,111 @@ def unslotted(seen: dict) -> list[str]:
 
 KEYFRAME_HEAD = "以参考图 1 的构图、机位、景别和光线为准出一张静帧"
 KEYFRAME_PRODUCT = "，把画面里的产品换成参考图 2 的产品，保持参考图 2 产品的外形、颜色和 logo，不要变形"
-PRODUCT_REFS_MAX = 3
-PRODUCT_ROLES = ("整体外观", "质地/膏体", "背面或包装细节")
-
-
-def product_ref_info(tpl: dict) -> tuple[int, list[str]]:
-    """(how many product images the package expects, their roles). 0 when the product does not change."""
-    if not tpl.get("needImage"):
-        return 0, []
-    info = tpl.get("productRefs") or (tpl.get("replica") or {}).get("productRefs") or {}
-    count = max(1, min(PRODUCT_REFS_MAX, int(info.get("count") or 1)))
-    roles = (list(info.get("roles") or []) + list(PRODUCT_ROLES))[:count]
-    return count, roles
-
-
-def keyframe_product_clause(refs: int, roles: list[str] | None = None) -> str:
-    """The clause appended to every keyframe prompt, by how many product images the package expects."""
-    refs = max(1, min(PRODUCT_REFS_MAX, int(refs or 1)))
-    if refs == 1:
-        return KEYFRAME_PRODUCT
-    roles = (list(roles or PRODUCT_ROLES) + list(PRODUCT_ROLES))[:refs]
-    numbers = f"参考图 2 至参考图 {refs + 1}" if refs > 2 else "参考图 2 和参考图 3"
-    detail = "、".join(f"参考图 {j + 2} 是{roles[j]}" for j in range(1, refs))
-    return (f"，把画面里的产品换成{numbers} 的产品（同一款产品：以参考图 2 为准，{detail}），"
-            f"保持参考图 2 产品的外形、颜色和 logo，不要把几张图混成新的包装")
+PRODUCT_MAX = 3
 AUDIO_RULE = "声音只要人声口播和现场环境音，不要背景音乐。"
 
 
-def video_prompt(video: str, line: str, voice: str) -> str:
+def _product(label: str, where: str = "") -> dict:
+    return {"label": str(label or "").strip()[:20], "where": str(where or "").strip()[:16]}
+
+
+def resolve_products(seen: dict, count: int | None = None, labels: list[str] | None = None
+                     ) -> tuple[list[dict], list[list[int]]]:
+    """Distinct products shown in the reference video, and which of them appear in each unit.
+
+    One shot can hold more than one product (a cleanser and a cotton pad in the same frame), and each of them
+    needs its own reference image. Products get stable keys p1..p3 so a unit refers to them across edits;
+    the per-shot order decides the reference positions (参考图 2, 3, 4) inside that shot.
+    """
+    rows = [_product(p.get("label") or p.get("name"), p.get("where")) for p in (seen.get("products") or []) if isinstance(p, dict)]
+    rows = [r for r in rows if r["label"] or r["where"]]
+    rows += [_product(x) for x in (labels or []) if str(x).strip()]
+    if count:
+        while len(rows) < int(count):
+            rows.append(_product(f"产品 {len(rows) + 1}"))
+    if not rows:
+        rows = [_product("")]
+
+    units = [u.get("products") or [] for u in (seen.get("units") or [])]
+    for row in units:  # a product named only inside a unit still becomes one of the package's products
+        for name in row:
+            name = str(name or "").strip()[:20]
+            if name and all(name != r["label"] for r in rows) and len(rows) < PRODUCT_MAX:
+                rows.append(_product(name))
+
+    products, merged = [], {}
+    for row in rows:
+        if row["label"] and row["label"] in merged:
+            continue
+        key = f"p{len(products) + 1}"
+        merged[row["label"]] = key
+        products.append({**row, "key": key})
+        if len(products) >= PRODUCT_MAX:
+            break
+
+    per_unit = []
+    for row in units:
+        picked = []
+        for name in row:
+            key = merged.get(str(name or "").strip()[:20])
+            idx = next((i for i, p in enumerate(products) if p["key"] == key), None)
+            if idx is not None and idx not in picked:
+                picked.append(idx)
+        per_unit.append(picked or [0])
+    return products, per_unit
+
+
+def product_list(tpl: dict) -> list[dict]:
+    """Products the package expects, each with the image handle the executing agent resolves."""
+    if not tpl.get("needImage"):
+        return []
+    items = [p for p in (tpl.get("products") or []) if isinstance(p, dict)][:PRODUCT_MAX]
+    out = []
+    for i, p in enumerate(items):
+        out.append({"key": p.get("key") or f"p{i + 1}", "label": p.get("label") or "", "where": p.get("where") or "",
+                    "image": "<productImage>" if i == 0 else f"<productImage:{i + 1}>"})
+    return out or [{"key": "p1", "label": "", "where": "", "image": "<productImage>"}]
+
+
+def step_product_list(tpl: dict, step: dict) -> list[dict]:
+    """The products inside one shot, in the order their reference images are passed."""
+    products = product_list(tpl)
+    by_key = {p["key"]: p for p in products}
+    picked = [by_key[k] for k in (step.get("productKeys") or []) if k in by_key]
+    return picked or products[:1]
+
+
+def keyframe_product_clause(products: list[dict]) -> str:
+    """The clause appended to a keyframe prompt. Positions are per shot: 参考图 2, 3, 4 in list order."""
+    if not products:
+        return ""
+    if len(products) == 1:
+        return KEYFRAME_PRODUCT  # exactly the old wording: the single image does the talking
+    parts = []
+    for i, p in enumerate(products, 1):
+        label = p.get("label") or "产品"
+        where = str(p.get("where") or "").strip()
+        if where and "画面" not in where and where[0] in "左右上下中前后旁角":
+            where = f"画面{where}"  # "右侧" -> "画面右侧"; "手边" is left as the model wrote it
+        subject = f"{where}的{label}" if where else f"第 {i} 件{label}"
+        parts.append(f"{subject}换成参考图 {i + 1} 的{label}")
+    return (f"，画面里有 {len(products)} 件产品：" + "，".join(parts)
+            + "；每件各自保持外形、颜色和 logo，不要混成一件，也不要多出别的产品")
+
+
+def video_prompt(video: str, line: str, voice: str, products: int = 1) -> str:
     parts = [video]
     if line:
         parts.append(f"口播（{voice or '自然人声'}）：「{line}」")
-    parts.append("产品保持外形和 logo，不要跳帧，画面不要字幕。" + AUDIO_RULE)
+    keep = "产品保持外形和 logo" if products <= 1 else f"{products} 件产品各自保持外形和 logo，位置和数量都不要变"
+    parts.append(keep + "，不要跳帧，画面不要字幕。" + AUDIO_RULE)
     return "\n".join(parts)
 
 
 def build_recipe(recipe_id: str, name: str, video: str, meta: dict, units: list[dict], frames: list[str], seen: dict,
-                 category: str = "", product_refs: int = 1, product_roles: list[str] | None = None) -> dict:
+                 category: str = "", product_count: int | None = None, product_labels: list[str] | None = None) -> dict:
     need_image = bool(seen.get("needImage"))
-    refs = max(1, min(PRODUCT_REFS_MAX, int(product_refs or 1))) if need_image else 0
-    roles = (list(product_roles or []) + list(PRODUCT_ROLES))[:max(1, refs)]
+    products, per_unit = resolve_products(seen, product_count, product_labels) if need_image else ([], [[] for _ in units])
     voice = seen.get("voice") or ""
     aspect = seen.get("aspectRatio") or meta.get("aspectRatio") or "9:16"
     if aspect not in ASPECTS:
@@ -351,16 +452,17 @@ def build_recipe(recipe_id: str, name: str, video: str, meta: dict, units: list[
              for k, slot in enumerate(used, 1)]
     language = seen.get("language") or ""
     steps: list[dict] = []
-    for unit, text, frame in zip(units, seen["units"], frames):
+    for number, (unit, text, frame) in enumerate(zip(units, seen["units"], frames), 1):
         k = unit["index"]
         line = stitch(text.get("line") or "", {}, slots)
-        head = KEYFRAME_HEAD + (keyframe_product_clause(refs, roles) if need_image else "") + "。画面不要字幕。"
+        shot_products = [products[i] for i in per_unit[number - 1]] if need_image else []
+        head = KEYFRAME_HEAD + keyframe_product_clause(shot_products) + "。画面不要字幕。"
         steps.append({"id": f"u{k}-frame", "kind": "i2i", "title": f"{k}·{text['title']} 首帧", "imageFrom": "ref",
-                      "refUrl": frame, "withProduct": need_image, "productRefs": refs, "productRoles": roles[:refs] if need_image else [],
+                      "refUrl": frame, "withProduct": need_image, "productKeys": [p["key"] for p in shot_products],
                       "unit": k, "prompt": f"{head}\n{text['keyframe']}", "aspectRatio": aspect})
         steps.append({"id": f"u{k}-video", "kind": "i2v", "title": f"{k}·{text['title']} {unit['duration']:.1f}s",
                       "imageFrom": "prev", "unit": k, "duration": unit["generate"], "targetDuration": unit["duration"],
-                      "prompt": video_prompt(text["video"], line, voice), "line": line, "aspectRatio": aspect})
+                      "prompt": video_prompt(text["video"], line, voice, len(shot_products) or 1), "line": line, "aspectRatio": aspect})
     steps.append({"id": "assemble", "kind": "assemble", "title": "按原片时间线拼接", "audio": "generated", "prompt": ""})
     return {
         "id": recipe_id, "appId": recipe_id, "name": name,
@@ -368,7 +470,7 @@ def build_recipe(recipe_id: str, name: str, video: str, meta: dict, units: list[
         "coverUrl": frames[0] if frames else "", "previewM3u8": video, "useCount": 0, "needImage": need_image,
         "slots": slots, "aspectRatio": aspect, "tags": ["自建", "按镜头复刻"], "origin": "draft", "mode": "replica",
         "category": category, "status": "ready", "createdAt": now(),
-        "productRefs": {"count": refs, "roles": roles[:refs] if need_image else []},
+        "products": products if need_image else [],
         "replica": {
             "duration": round(float(meta.get("duration") or 0), 3), "width": meta.get("width"), "height": meta.get("height"),
             "fps": meta.get("fps"), "hasAudio": bool(meta.get("hasAudio")), "voice": voice, "language": language,

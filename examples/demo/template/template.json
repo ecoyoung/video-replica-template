@@ -1,6 +1,6 @@
 {
-  "id": "tpl-d72a8f0bd22b",
-  "appId": "tpl-d72a8f0bd22b",
+  "id": "tpl-46769122ad52",
+  "appId": "tpl-46769122ad52",
   "name": "GLOW 卸妆膏 · 演示",
   "desc": "暖调慢节奏的卸妆膏广告模板",
   "coverUrl": "frames/u1-first.jpg",
@@ -23,14 +23,21 @@
   "mode": "replica",
   "category": "美妆",
   "status": "ready",
-  "createdAt": "2026-11-13T02:52:59Z",
+  "createdAt": "2026-11-13T07:31:04Z",
+  "products": [
+    {
+      "label": "卸妆膏",
+      "where": "画面中央",
+      "key": "p1"
+    }
+  ],
   "replica": {
     "duration": 20.5,
     "width": 720,
     "height": 1280,
     "fps": 30.0,
     "hasAudio": false,
-    "voice": "年轻女声，轻柔、语速偏慢",
+    "voice": "",
     "language": "",
     "voiceId": "",
     "bgmUrl": "",
@@ -145,6 +152,9 @@
       "imageFrom": "ref",
       "refUrl": "frames/u1-first.jpg",
       "withProduct": true,
+      "productKeys": [
+        "p1"
+      ],
       "unit": 1,
       "prompt": "以参考图 1 的构图、机位、景别和光线为准出一张静帧，把画面里的产品换成参考图 2 的产品，保持参考图 2 产品的外形、颜色和 logo，不要变形。画面不要字幕。\n9:16 竖构图，【背景色】渐变背景，画面正中偏下摆着一罐【背景色】包装的【产品名】，磨砂膏体、深色盖子，左上方留出两行标题位置，柔和的左上方主光在罐身留下一条高光，地面有淡阴影。",
       "aspectRatio": "9:16"
@@ -168,6 +178,9 @@
       "imageFrom": "ref",
       "refUrl": "frames/u2-first.jpg",
       "withProduct": true,
+      "productKeys": [
+        "p1"
+      ],
       "unit": 2,
       "prompt": "以参考图 1 的构图、机位、景别和光线为准出一张静帧，把画面里的产品换成参考图 2 的产品，保持参考图 2 产品的外形、颜色和 logo，不要变形。画面不要字幕。\n9:16 竖构图，浅米色背景，台面上并排三团不同厚度的乳霜质地，从稠到薄，侧逆光让质地边缘透亮，上方留出标题空间。",
       "aspectRatio": "9:16"
@@ -191,6 +204,9 @@
       "imageFrom": "ref",
       "refUrl": "frames/u3-first.jpg",
       "withProduct": true,
+      "productKeys": [
+        "p1"
+      ],
       "unit": 3,
       "prompt": "以参考图 1 的构图、机位、景别和光线为准出一张静帧，把画面里的产品换成参考图 2 的产品，保持参考图 2 产品的外形、颜色和 logo，不要变形。画面不要字幕。\n9:16 竖构图，画面中间一条白色分割线，左右各一张侧脸特写，左侧肤色暗沉带残妆，右侧干净透亮，背景为【背景色】。",
       "aspectRatio": "9:16"
@@ -214,6 +230,9 @@
       "imageFrom": "ref",
       "refUrl": "frames/u4-first.jpg",
       "withProduct": true,
+      "productKeys": [
+        "p1"
+      ],
       "unit": 4,
       "prompt": "以参考图 1 的构图、机位、景别和光线为准出一张静帧，把画面里的产品换成参考图 2 的产品，保持参考图 2 产品的外形、颜色和 logo，不要变形。画面不要字幕。\n9:16 竖构图，深蓝灰渐变背景，画面中央是【背景色】包装的【产品名】正视图，下方一行品牌名，整体压暗、留白多。",
       "aspectRatio": "9:16"
@@ -238,14 +257,22 @@
       "prompt": ""
     }
   ],
-  "sourceRecipeId": "draft-b8a8fe6a6e7f",
+  "sourceRecipeId": "draft-8f16f37de86e",
   "handoff": {
     "schema": "video-replica-handoff",
-    "version": 1,
+    "version": 2,
     "instructions": "AGENT.md",
     "diagram": "flow.html",
     "inputs": {
       "productImage": "required",
+      "products": [
+        {
+          "key": "p1",
+          "label": "卸妆膏",
+          "where": "画面中央",
+          "image": "<productImage>"
+        }
+      ],
       "slots": [
         {
           "key": "s1",

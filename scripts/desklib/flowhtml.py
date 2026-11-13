@@ -21,8 +21,8 @@ NODE_W = 210
 def _product_labels(tpl: dict, frame: dict) -> list[str]:
     if not frame.get("withProduct"):
         return []
-    count, roles = rcp.product_ref_info(tpl)
-    return [f"参考图 {i + 2}：产品（{roles[i]}）" for i in range(count)]
+    return [f"参考图 {i + 2}：{p['label'] or '产品'}" + (f"（{p['where']}）" if p["where"] else "")
+            for i, p in enumerate(rcp.step_product_list(tpl, frame))]
 
 
 def _uses(prompt: str, slot: dict, slots: list[dict]) -> bool:
