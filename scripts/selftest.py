@@ -381,6 +381,16 @@ if HAVE_FFMPEG:
 
     check("first frame lands after the opening transition", t_first_frame)
 
+    def t_language():
+        cases = (("这是中文台词，一罐就够了", "zh"), ("これは日本語のナレーションです", "ja"),
+                 ("This balm melts makeup fast", "en"), ("Esta crema desmaquilla muy rápido", "es"))
+        for text, want in cases:
+            got = plan.speech_language([{"text": text}])
+            assert got == want, (text, got, want)
+        assert plan.LANGUAGE_NAMES.get("ja"), plan.LANGUAGE_NAMES
+
+    check("speech language: zh / ja / en / es", t_language)
+
     if HAVE_FFMPEG:
         def t_look():
             out = tmp / "look.mp4"

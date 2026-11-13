@@ -1,5 +1,11 @@
 <div align="center">
 
+[English](README.md) · **简体中文** · [日本語](README.ja.md) · [Español](README.es.md)
+
+</div>
+
+<div align="center">
+
 # video-replica-template
 
 **把一条参考短视频，拆成另一个 agent 照着就能执行的复刻模板。**
@@ -153,7 +159,7 @@ python3 scripts/desk.py package /tmp/demo-work --out /tmp/demo-out
 ## 开发
 
 ```bash
-python3 scripts/selftest.py                 # 11 项：切镜、分段、口播、画面统计、配方、交付包、端到端
+python3 scripts/selftest.py                 # 12 项：切镜、分段、口播语言、画面统计、配方、交付包、端到端
 python3 examples/make_demo.py               # 重新生成演示片（Pillow + ffmpeg）
 python3 -m venv .venv && .venv/bin/pip install numpy opencv-python-headless
 .venv/bin/python scripts/selftest.py        # 再跑一遍，覆盖 cv2 路径
@@ -167,6 +173,6 @@ MIT。演示片是脚本合成、随仓库生成；不含任何第三方视频�
 
 <div align="center">
 
-[English](README.md) · [设计说明](references/workflow.md) · [字段清单](references/recipe.md)
+[设计说明](references/workflow.md) · [字段清单](references/recipe.md)
 
 </div>

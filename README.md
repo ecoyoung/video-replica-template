@@ -1,5 +1,11 @@
 <div align="center">
 
+**English** · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md)
+
+</div>
+
+<div align="center">
+
 # video-replica-template
 
 **Turn a reference short video into a shot-by-shot replication template that another agent can actually execute.**
@@ -168,7 +174,7 @@ On a 43 s 720×1280 clip: **1.4 s** to detect 19 shots, **3.1 s** for the full i
 ## Development
 
 ```bash
-python3 scripts/selftest.py                 # 11 checks: shots, units, speech, look, recipe, package, e2e
+python3 scripts/selftest.py                 # 12 checks: shots, units, speech language, look, recipe, package, e2e
 python3 examples/make_demo.py               # regenerate the demo clip (Pillow + ffmpeg)
 .venv/bin/pip install numpy opencv-python-headless && .venv/bin/python scripts/selftest.py
 ```
@@ -182,6 +188,6 @@ included.
 
 <div align="center">
 
-[中文说明](README.zh-CN.md) · [Design notes](references/workflow.md) · [Field reference](references/recipe.md)
+[Design notes](references/workflow.md) · [Field reference](references/recipe.md)
 
 </div>

@@ -251,8 +251,9 @@ def assign_speech(segments: list[dict], units: list[dict]) -> list[str]:
     return [" ".join(parts).strip() for parts in out]
 
 
-LANGUAGE_NAMES = {"en": "英语", "es": "西语", "zh": "中文"}
-_SPANISH_HINTS = (" el ", " la ", " los ", " las ", " que ", " para ", " con ", " es ", " muy ", " y ", " una ", " este ")
+LANGUAGE_NAMES = {"en": "英语", "es": "西语", "zh": "中文", "ja": "日语"}
+_SPANISH_HINTS = (" el ", " la ", " los ", " las ", " que ", " para ", " con ", " es ", " muy ", " y ", " una ",
+                  " este ", " del ", " por ", " se ", " su ", " más ", " no ", " al ", " tu ")
 
 
 def speech_language(segments: list[dict]) -> str:
@@ -261,9 +262,12 @@ def speech_language(segments: list[dict]) -> str:
         return ""
     cjk = sum(1 for ch in text if "一" <= ch <= "鿿")
     latin = sum(1 for ch in text if ch.isalpha() and ord(ch) < 0x250)
+    kana = sum(1 for ch in text if "\u3040" <= ch <= "\u30ff")
+    if kana >= 2:
+        return "ja"  # kana never appear in Chinese, so this cannot misfire
     if cjk >= latin:
         return "zh"
     lower = f" {text.lower()} "
-    if any(ch in lower for ch in "ñ¿¡") or sum(lower.count(w) for w in _SPANISH_HINTS) >= 2:
+    if any(ch in lower for ch in "ñ¿¡áéíóú") or sum(lower.count(w) for w in _SPANISH_HINTS) >= 2:
         return "es"
     return "en"

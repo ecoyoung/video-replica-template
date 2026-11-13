@@ -107,7 +107,7 @@ pip install faster-whisper   # 首次会下模型；转写质量一般，转完�
 ffmpeg -v error -y -i "<参考视频>" -ac 1 -ar 16000 audio.wav
 ```
 
-- 语言自动识别为 zh / en / es；一句跨两段时工具按重叠时长切词。
+- 语言自动识别为中文 / 日语 / 英语 / 西语（zh / ja / en / es）；一句跨两段时工具按重叠时长切词。
 
 ### 4. 写配方（vlm.json）
 
