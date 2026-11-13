@@ -178,7 +178,7 @@ python3 scripts/desk.py package /tmp/demo-work --out /tmp/demo-out
 ## 開発
 
 ```bash
-python3 scripts/selftest.py                 # 12 項目：ショット・単位・ナレーション・見え方・レシピ・パッケージ・E2E
+python3 scripts/selftest.py                 # 31 項目：ショット・単位・ナレーション・言語・見え方・スロット・レシピ・パッケージ・E2E
 python3 examples/make_demo.py               # デモ動画を再生成（Pillow + ffmpeg）
 python3 -m venv .venv && .venv/bin/pip install numpy opencv-python-headless
 .venv/bin/python scripts/selftest.py        # cv2 経路も実行

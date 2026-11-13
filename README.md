@@ -174,7 +174,7 @@ On a 43 s 720×1280 clip: **1.4 s** to detect 19 shots, **3.1 s** for the full i
 ## Development
 
 ```bash
-python3 scripts/selftest.py                 # 12 checks: shots, units, speech language, look, recipe, package, e2e
+python3 scripts/selftest.py                 # 31 checks: shots, units, speech, language, look, slots, recipe, package, e2e
 python3 examples/make_demo.py               # regenerate the demo clip (Pillow + ffmpeg)
 .venv/bin/pip install numpy opencv-python-headless && .venv/bin/python scripts/selftest.py
 ```

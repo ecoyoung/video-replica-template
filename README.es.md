@@ -182,7 +182,7 @@ medición de aspecto).
 ## Desarrollo
 
 ```bash
-python3 scripts/selftest.py                 # 12 pruebas: planos, unidades, voz, aspecto, receta, paquete, e2e
+python3 scripts/selftest.py                 # 31 pruebas: planos, unidades, voz, idioma, aspecto, ranuras, receta, paquete, e2e
 python3 examples/make_demo.py               # regenera el clip de demostración (Pillow + ffmpeg)
 python3 -m venv .venv && .venv/bin/pip install numpy opencv-python-headless
 .venv/bin/python scripts/selftest.py        # también la ruta cv2

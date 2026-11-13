@@ -159,7 +159,7 @@ python3 scripts/desk.py package /tmp/demo-work --out /tmp/demo-out
 ## 开发
 
 ```bash
-python3 scripts/selftest.py                 # 12 项：切镜、分段、口播语言、画面统计、配方、交付包、端到端
+python3 scripts/selftest.py                 # 31 项：切镜、分段、口播、语言、画面统计、槽位、配方、交付包、端到端
 python3 examples/make_demo.py               # 重新生成演示片（Pillow + ffmpeg）
 python3 -m venv .venv && .venv/bin/pip install numpy opencv-python-headless
 .venv/bin/python scripts/selftest.py        # 再跑一遍，覆盖 cv2 路径
