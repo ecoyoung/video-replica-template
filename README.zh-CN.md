@@ -107,7 +107,7 @@ python3 scripts/desk.py package /tmp/demo-work --out /tmp/demo-out
 | `desk.py doctor` | 环境自检：python、ffmpeg、当前用哪个切镜器 |
 | `desk.py ingest VIDEO WD [--name N] [--max-units 6]` | 切镜 → 分段 → 抽首帧 → 写 `request.md` |
 | `desk.py speech WD --transcript f.json` | 挂上带时间码的口播（srt / vtt / json / tsv） |
-| `desk.py recipe WD --vlm vlm.json` | 校验 agent 的答案，组装配方 |
+| `desk.py recipe WD --vlm vlm.json [--product-images 1-3]` | 校验 agent 的答案，组装配方；产品可给 2–3 张图（正面 / 质地 / 背面），模型少猜一点 |
 | `desk.py package WD --out DIR [--units 1,2] [--slots …]` | 生成交付包 + zip |
 | `desk.py status WD` | 当前工作目录走到哪一步 |
 

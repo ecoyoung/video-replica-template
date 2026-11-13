@@ -227,19 +227,29 @@ def _is_product_item(item: str, terms: list[str]) -> bool:
 
 
 def drop_product_slots(seen: dict) -> dict:
-    """The product comes from the uploaded product image, so it can never be a slot."""
+    """The product comes from the uploaded product image, so it can never be a slot.
+
+    Dropping is deliberate, but silent drops confuse people, so remember what went: the CLI turns this into a
+    warning that says where the product information belongs instead (in the product images).
+    """
     terms = seen.get("productTerms") or []
     slots = []
+    dropped_slots, dropped_items = [], []
     for slot in seen.get("slots") or []:
-        if str(slot.get("title") or "").strip() in PRODUCT_SLOT_TITLES:
+        title = str(slot.get("title") or "").strip()
+        if title in PRODUCT_SLOT_TITLES:
+            dropped_slots.append(title)
             continue
         default = str(slot.get("default") or "")
         items = [x.strip() for x in re.split(ITEM_SPLIT, default) if x.strip()]
         kept = [x for x in items if not _is_product_item(x, terms)]
         if items and not kept:
+            dropped_slots.append(title)
             continue
+        if len(kept) != len(items):
+            dropped_items.append(title)
         slots.append({**slot, "default": "、".join(kept)} if len(kept) != len(items) else slot)
-    return {**seen, "slots": slots}
+    return {**seen, "slots": slots, "droppedProductSlots": {"slots": dropped_slots, "items": dropped_items}}
 
 
 def slotify_fallback(seen: dict) -> dict:
@@ -291,6 +301,30 @@ def unslotted(seen: dict) -> list[str]:
 
 KEYFRAME_HEAD = "以参考图 1 的构图、机位、景别和光线为准出一张静帧"
 KEYFRAME_PRODUCT = "，把画面里的产品换成参考图 2 的产品，保持参考图 2 产品的外形、颜色和 logo，不要变形"
+PRODUCT_REFS_MAX = 3
+PRODUCT_ROLES = ("整体外观", "质地/膏体", "背面或包装细节")
+
+
+def product_ref_info(tpl: dict) -> tuple[int, list[str]]:
+    """(how many product images the package expects, their roles). 0 when the product does not change."""
+    if not tpl.get("needImage"):
+        return 0, []
+    info = tpl.get("productRefs") or (tpl.get("replica") or {}).get("productRefs") or {}
+    count = max(1, min(PRODUCT_REFS_MAX, int(info.get("count") or 1)))
+    roles = (list(info.get("roles") or []) + list(PRODUCT_ROLES))[:count]
+    return count, roles
+
+
+def keyframe_product_clause(refs: int, roles: list[str] | None = None) -> str:
+    """The clause appended to every keyframe prompt, by how many product images the package expects."""
+    refs = max(1, min(PRODUCT_REFS_MAX, int(refs or 1)))
+    if refs == 1:
+        return KEYFRAME_PRODUCT
+    roles = (list(roles or PRODUCT_ROLES) + list(PRODUCT_ROLES))[:refs]
+    numbers = f"参考图 2 至参考图 {refs + 1}" if refs > 2 else "参考图 2 和参考图 3"
+    detail = "、".join(f"参考图 {j + 2} 是{roles[j]}" for j in range(1, refs))
+    return (f"，把画面里的产品换成{numbers} 的产品（同一款产品：以参考图 2 为准，{detail}），"
+            f"保持参考图 2 产品的外形、颜色和 logo，不要把几张图混成新的包装")
 AUDIO_RULE = "声音只要人声口播和现场环境音，不要背景音乐。"
 
 
@@ -303,8 +337,10 @@ def video_prompt(video: str, line: str, voice: str) -> str:
 
 
 def build_recipe(recipe_id: str, name: str, video: str, meta: dict, units: list[dict], frames: list[str], seen: dict,
-                 category: str = "") -> dict:
+                 category: str = "", product_refs: int = 1, product_roles: list[str] | None = None) -> dict:
     need_image = bool(seen.get("needImage"))
+    refs = max(1, min(PRODUCT_REFS_MAX, int(product_refs or 1))) if need_image else 0
+    roles = (list(product_roles or []) + list(PRODUCT_ROLES))[:max(1, refs)]
     voice = seen.get("voice") or ""
     aspect = seen.get("aspectRatio") or meta.get("aspectRatio") or "9:16"
     if aspect not in ASPECTS:
@@ -318,10 +354,10 @@ def build_recipe(recipe_id: str, name: str, video: str, meta: dict, units: list[
     for unit, text, frame in zip(units, seen["units"], frames):
         k = unit["index"]
         line = stitch(text.get("line") or "", {}, slots)
-        head = KEYFRAME_HEAD + (KEYFRAME_PRODUCT if need_image else "") + "。画面不要字幕。"
+        head = KEYFRAME_HEAD + (keyframe_product_clause(refs, roles) if need_image else "") + "。画面不要字幕。"
         steps.append({"id": f"u{k}-frame", "kind": "i2i", "title": f"{k}·{text['title']} 首帧", "imageFrom": "ref",
-                      "refUrl": frame, "withProduct": need_image, "unit": k, "prompt": f"{head}\n{text['keyframe']}",
-                      "aspectRatio": aspect})
+                      "refUrl": frame, "withProduct": need_image, "productRefs": refs, "productRoles": roles[:refs] if need_image else [],
+                      "unit": k, "prompt": f"{head}\n{text['keyframe']}", "aspectRatio": aspect})
         steps.append({"id": f"u{k}-video", "kind": "i2v", "title": f"{k}·{text['title']} {unit['duration']:.1f}s",
                       "imageFrom": "prev", "unit": k, "duration": unit["generate"], "targetDuration": unit["duration"],
                       "prompt": video_prompt(text["video"], line, voice), "line": line, "aspectRatio": aspect})
@@ -332,6 +368,7 @@ def build_recipe(recipe_id: str, name: str, video: str, meta: dict, units: list[
         "coverUrl": frames[0] if frames else "", "previewM3u8": video, "useCount": 0, "needImage": need_image,
         "slots": slots, "aspectRatio": aspect, "tags": ["自建", "按镜头复刻"], "origin": "draft", "mode": "replica",
         "category": category, "status": "ready", "createdAt": now(),
+        "productRefs": {"count": refs, "roles": roles[:refs] if need_image else []},
         "replica": {
             "duration": round(float(meta.get("duration") or 0), 3), "width": meta.get("width"), "height": meta.get("height"),
             "fps": meta.get("fps"), "hasAudio": bool(meta.get("hasAudio")), "voice": voice, "language": language,

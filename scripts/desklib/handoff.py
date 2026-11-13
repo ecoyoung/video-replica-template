@@ -36,10 +36,22 @@ def _unit_steps(tpl: dict) -> list[tuple[dict, dict, dict]]:
             for u in (tpl.get("replica") or {}).get("units") or []]
 
 
+def _role_line(roles: list[str]) -> str:
+    return " → ".join(roles)
+
+
+def _product_input_line(refs: int, roles: list[str]) -> str:
+    if refs <= 1:
+        return "**必填**，1 张，白底或干净背景的产品照效果最好（也可以再给 2 张细节图，重跑 package 时用 --product-images 指定）"
+    return (f"**必填**，共 {refs} 张：1 张整体外观 + {refs - 1} 张细节，按 {' → '.join(roles)} 的顺序传；"
+            "都是同一款产品，缺一张时用整体外观那张顶替，不要用别的产品的图")
+
+
 def agent_markdown(tpl: dict) -> str:
     rep = tpl.get("replica") or {}
     slots = tpl.get("slots") or []
     need = bool(tpl.get("needImage"))
+    refs, roles = product_refs(tpl)
     units = _unit_steps(tpl)
     w, h = rep.get("width"), rep.get("height")
     lines = [
@@ -55,7 +67,7 @@ def agent_markdown(tpl: dict) -> str:
         "",
         "## 1. 需要的输入",
         "",
-        f"- 产品图：{'**必填**，白底或干净背景的产品照效果最好' if need else '不需要（这条片子没有可替换的商品）'}",
+        f"- 产品图：{_product_input_line(refs, roles) if need else '不需要（这条片子没有可替换的商品）'}",
     ]
     if slots:
         lines += ["- 可替换内容（不填就用默认值）：", "", "| key | 槽名 | 默认值 |", "|---|---|---|"]
@@ -98,7 +110,8 @@ def agent_markdown(tpl: dict) -> str:
             f"**步骤 `{frame.get('id')}`：图生图（首帧）**",
             f"- 参考图 1（构图、机位、景别、光线）：`{frame.get('refUrl', '')}`",
             f"- 画面（实测）：{look.look_text(unit.get('look') or {}) or '—'}",
-            f"- 参考图 2（产品）：{'用户的产品图' if frame.get('withProduct') else '不需要'}",
+            f"- 参考图 2{'–' + str(refs + 1) if refs > 1 else ''}（产品）："
+            f"{('用户的产品图' + (f'，按 {_role_line(roles)} 的顺序传' if refs > 1 else '')) if frame.get('withProduct') else '不需要'}",
             f"- 比例：{frame.get('aspectRatio')}",
             "- 提示词：",
             "",
@@ -141,9 +154,18 @@ def agent_markdown(tpl: dict) -> str:
     return "\n".join(lines).replace("\n\n\n", "\n\n") + "\n"
 
 
+def product_refs(tpl: dict) -> tuple[int, list[str]]:
+    return rcp.product_ref_info(tpl)
+
+
+def _product_reference_labels(count: int, roles: list[str]) -> list[str]:
+    return [f"参考图 {i + 2}（{roles[i]}）" for i in range(count)]
+
+
 def handoff_block(tpl: dict) -> dict:
     rep = tpl.get("replica") or {}
     units = _unit_steps(tpl)
+    refs, roles = product_refs(tpl)
     return {
         "schema": "video-replica-handoff",
         "version": 1,
@@ -151,6 +173,8 @@ def handoff_block(tpl: dict) -> dict:
         "diagram": "flow.html",
         "inputs": {
             "productImage": "required" if tpl.get("needImage") else "none",
+            **({"productImages": {"count": refs, "min": 1, "max": rcp.PRODUCT_REFS_MAX, "roles": roles}}
+               if tpl.get("needImage") else {}),
             "slots": [{"key": s["key"], "title": s["title"], "default": s.get("default", "")} for s in tpl.get("slots") or []],
         },
         "output": {"width": rep.get("width"), "height": rep.get("height"), "aspectRatio": tpl.get("aspectRatio"),
@@ -158,7 +182,9 @@ def handoff_block(tpl: dict) -> dict:
         "units": [
             {
                 "index": u["index"], "sourceStart": u["start"], "sourceEnd": u["end"], "targetDuration": u["duration"],
-                "frame": {"step": f.get("id"), "kind": "image-to-image", "references": [f.get("refUrl")] + (["<productImage>"] if f.get("withProduct") else []),
+                "frame": {"step": f.get("id"), "kind": "image-to-image",
+                          "references": [f.get("refUrl")] + (["<productImage>"] + [f"<productImage:{i}>" for i in range(2, refs + 1)]
+                                                             if f.get("withProduct") else []),
                           "prompt": f.get("prompt"), "aspectRatio": f.get("aspectRatio")},
                 "video": {"step": v.get("id"), "kind": "image-to-video", "firstFrame": f"<output of {f.get('id')}>",
                           "duration": v.get("duration"), "prompt": v.get("prompt"), "line": v.get("line", ""), "aspectRatio": v.get("aspectRatio")},
