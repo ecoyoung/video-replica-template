@@ -43,14 +43,16 @@ replica-work/
 - `handoff`（机器可读的执行摘要）：
 
 ```
-{ schema: "video-replica-handoff", version: 1, instructions: "AGENT.md", diagram: "flow.html",
+{ schema: "video-replica-handoff", version: 2, instructions: "AGENT.md", diagram: "flow.html",
   inputs: { productImage: "required"|"none",
-            productImages: { count: 1|2|3, min: 1, max: 3, roles: ["整体外观", …] },   // needImage 时才有
+            products: [{key: "p1", label: "卸妆膏", where: "画面右侧", image: "<productImage>"},
+                       {key: "p2", label: "化妆棉", where: "右下角", image: "<productImage:2>"}],   // needImage 时才有
             slots: [{key, title, default}] },
   output: { width, height, aspectRatio, duration, fpsMax: 30 },
   units: [{ index, sourceStart, sourceEnd, targetDuration,
             frame: { step, kind: "image-to-image",
-                     references: ["frames/u1-first.jpg", "<productImage>", "<productImage:2>", "<productImage:3>"], prompt, aspectRatio },
+                     references: ["frames/u1-first.jpg", "<productImage>", "<productImage:2>"],  // 首帧 + 本镜出现的产品，顺序即参考图 2、3
+                     prompt, aspectRatio },
             video: { step, kind: "image-to-video", firstFrame: "<output of u1-frame>", duration, prompt, line, aspectRatio } }],
   assembly: { order: "by unit index", speedRange: [0.8, 3], fit: "scale-crop-fill", useReferenceAudio: false, bgmVolume: 0.35 },
   rules: [...] }
@@ -61,16 +63,23 @@ replica-work/
 `transcript_json=[{"start": 0.2, "end": 3.0, "text": "…"}]`（秒），或 `.srt` / `.vtt` / `.json` / `.tsv`（毫秒）。
 一句跨两段时按重叠时长把词切开；沾边不到 25% 的段不分词。语言自动识别为 zh / en / es。
 
-## 产品图 1–3 张
+## 同一镜头里多件产品
 
-产品外形只来自上传的产品图，所以图越多，模型猜得越少：正面决定外形、颜色、logo，第 2 张补质地，第 3 张补背面或成分表。
+一段画面里可能同时出现两件产品（卸妆膏和化妆棉同框、双支套装并排、主品和工具一起入镜）。这种镜头只给一张产品图是不行的：模型会把第二件产品留成原片里的样子。做法是**每件产品一张参考图**。
 
-```bash
-python3 scripts/desk.py recipe WD --vlm vlm.json --product-images 3 --product-roles "整体外观,膏体质地,背面成分表"
+模型回答里两个字段描述产品：
+
+```jsonc
+"products": [{"name": "卸妆膏", "where": "画面右侧"}, {"name": "化妆棉", "where": "右下角"}],
+"units": [{"title": "…", "products": ["卸妆膏", "化妆棉"], "keyframe": "…", "video": "…"}]
 ```
 
-- 张数写进 `recipe.productRefs = {count, roles}`，随模板进 `template.json`，`handoff.inputs.productImages` 同源。
-- 首帧参考图变成 `[frames/u1-first.jpg, "<productImage>", "<productImage:2>", "<productImage:3>"]`；只给 1 张时仍是 `[首帧, "<productImage>"]`，与旧包兼容。
-- 首帧提示词按张数改写：「参考图 2 至参考图 4 的产品（同一款产品：以参考图 2 为准，参考图 3 是膏体质地、参考图 4 是背面成分表）…不要把几张图混成新的包装」。
-- `package` 读配方里的张数，不用再传参数；改张数就重跑 `recipe`。
-- **产品仍然不做槽位**：`product / 商品 / 产品名 / 主产品` 以及槽值里被判定为产品原型的条目会被丢掉，`recipe` 的 `warnings` 会说明原因。外形细节请拍进产品图，不要用文字描述。
+- `products` 是整个片子出现的不同产品，顺序决定编号：`p1` → `<productImage>`（参考图 2），`p2` → `<productImage:2>`（参考图 3），最多 3 件。
+- 每段的 `products` 只列这一段画面里真有的产品；没写时按第一件处理（老回答照样能跑）。
+- 提示词按这一段的产品数量改写：一件时照旧「把画面里的产品换成参考图 2 的产品」；两件时「画面里有 2 件产品：画面右侧的卸妆膏换成参考图 2 的卸妆膏，画面右下角的化妆棉换成参考图 3 的化妆棉；每件各自保持外形、颜色和 logo，不要混成一件，也不要多出别的产品」。视频提示词同步改成「2 件产品各自保持外形和 logo，位置和数量都不要变」。
+- **参考图编号是每一镜内部的顺序**：某一段只出现化妆棉时，它的 `references` 是 `[首帧, "<productImage:2>"]`，提示词里的「参考图 2」就指这一张——`AGENT.md` 逐段写清楚了哪张图是哪件产品。
+- CLI 可以覆盖模型给的张数和名字：`--products 2 --product-labels "卸妆膏,化妆棉"`（`--product-images` / `--product-roles` 是旧别名）。
+
+## 产品仍然不做槽位
+
+产品外形只来自上传的产品图。`product / 商品 / 产品名 / 主产品` 以及槽值里被判定为产品原型的条目会被丢掉，`recipe` 的 `warnings` 会说明原因和替代做法（把包装细节拍进产品图，不要用文字描述）。

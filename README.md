@@ -114,7 +114,7 @@ agents to read rather than humans.
 | `desk.py doctor` | environment check: python, ffmpeg, active detector |
 | `desk.py ingest VIDEO WD [--name N] [--max-units 6]` | shot detection → units → first frames → `request.md` |
 | `desk.py speech WD --transcript f.json` | attach a timecoded voice-over (srt / vtt / json / tsv) |
-| `desk.py recipe WD --vlm vlm.json [--product-images 1-3]` | validate the agent's answer, build the template; 2–3 product images (front / texture / back) mean the model guesses less |
+| `desk.py recipe WD --vlm vlm.json [--products 1-3]` | validate the agent's answer, build the template; a shot holding two products gets one reference image per product |
 | `desk.py package WD --out DIR [--units 1,2] [--slots …]` | render the handoff package + zip |
 | `desk.py status WD` | where the work directory is in the pipeline |
 

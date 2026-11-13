@@ -142,11 +142,11 @@ ANSWER = {"desc": "d", "needImage": True, "aspectRatio": "9:16", "product": {"na
                                     {"title": "收尾", "keyframe": "spoon 搅拌", "video": "固定", "line": ""}]}
 
 
-def build(product_refs=1, roles=None):
-    seen = rcp.slotify_fallback(rcp.drop_product_slots(rcp.normalize_units_answer(ANSWER, UNITS)))
+def build(answer=None, product_count=None, labels=None):
+    seen = rcp.slotify_fallback(rcp.drop_product_slots(rcp.normalize_units_answer(answer or ANSWER, UNITS)))
     return rcp.build_recipe("draft-x", "T", "source/a.mp4", {"duration": 8, "aspectRatio": "9:16"}, UNITS,
                             ["frames/u1-first.jpg", "frames/u2-first.jpg"], seen,
-                            product_refs=product_refs, product_roles=roles)
+                            product_count=product_count, product_labels=labels)
 
 
 def t_count():
@@ -200,15 +200,21 @@ def t_template():
     assert tpl["replica"]["duration"] == 5 and tpl["sampleUrl"] == "jobs/j1/remake.mp4" and tpl["coverUrl"] == "jobs/j1/u1-frame.png"
 
 
-def t_product_refs():
+def t_multi_product():
     one = build()
-    assert one["productRefs"] == {"count": 1, "roles": ["整体外观"]}, one["productRefs"]
+    assert one["products"] == [{"label": "Ninja blender", "where": "", "key": "p1"}], one["products"]
     assert one["steps"][0]["prompt"].startswith(rcp.KEYFRAME_HEAD + rcp.KEYFRAME_PRODUCT)
 
-    three = build(product_refs=3, roles=["整体外观", "膏体质地", "背面成分表"])
-    assert three["productRefs"]["count"] == 3 and three["steps"][0]["productRefs"] == 3, three["productRefs"]
-    head = three["steps"][0]["prompt"]
-    assert "参考图 2 至参考图 4 的产品" in head and "参考图 3 是膏体质地" in head and "参考图 4 是背面成分表" in head, head
+    two = {**ANSWER, "products": [{"name": "卸妆膏", "where": "画面右侧"}, {"name": "化妆棉", "where": "右下"}],
+           "units": [{**ANSWER["units"][0], "products": ["卸妆膏"]},
+                     {**ANSWER["units"][1], "products": ["卸妆膏", "化妆棉"]}]}
+    r = build(two)
+    assert [p["key"] for p in r["products"]] == ["p1", "p2"], r["products"]
+    assert r["steps"][0]["productKeys"] == ["p1"], r["steps"][0]
+    assert r["steps"][2]["productKeys"] == ["p1", "p2"], r["steps"][2]
+    head = r["steps"][2]["prompt"]
+    assert "画面里有 2 件产品" in head and "参考图 2 的卸妆膏" in head and "参考图 3 的化妆棉" in head, head
+    assert "2 件产品各自保持外形和 logo" in r["steps"][3]["prompt"]
 
     wd = Path(tempfile.mkdtemp())
     (wd / "frames").mkdir()
@@ -216,20 +222,21 @@ def t_product_refs():
         (wd / "frames" / f"u{k}-first.jpg").write_bytes(b"jpg")
     (wd / "source").mkdir()
     (wd / "source" / "a.mp4").write_bytes(b"mp4")
-    pkg = handoff.build_package(wd, three, wd / "export", "多图模板")
+    pkg = handoff.build_package(wd, r, wd / "export", "双产品模板")
     folder = Path(pkg["folder"])
     tpl = json.loads((folder / "template.json").read_text(encoding="utf-8"))
-    inputs = tpl["handoff"]["inputs"]
-    assert inputs["productImages"] == {"count": 3, "min": 1, "max": 3, "roles": ["整体外观", "膏体质地", "背面成分表"]}, inputs
-    assert tpl["handoff"]["units"][0]["frame"]["references"] == [
-        "frames/u1-first.jpg", "<productImage>", "<productImage:2>", "<productImage:3>"], tpl["handoff"]["units"][0]["frame"]
+    h = tpl["handoff"]
+    assert [p["image"] for p in h["inputs"]["products"]] == ["<productImage>", "<productImage:2>"], h["inputs"]
+    assert h["units"][0]["frame"]["references"] == ["frames/u1-first.jpg", "<productImage>"], h["units"][0]["frame"]
+    assert h["units"][1]["frame"]["references"] == [
+        "frames/u2-first.jpg", "<productImage>", "<productImage:2>"], h["units"][1]["frame"]
     md = (folder / "AGENT.md").read_text(encoding="utf-8")
-    for needle in ("共 3 张", "参考图 2–4（产品）", "整体外观 → 膏体质地 → 背面成分表"):
+    for needle in ("共 2 张", "参考图 2 = 卸妆膏", "参考图 3 = 化妆棉", "`<productImage:2>` → 化妆棉"):
         assert needle in md, needle
     page = (folder / "flow.html").read_text(encoding="utf-8")
     data = json.loads(re.search(r'<script type="application/json" id="data">(.*?)</script>', page, re.S).group(1).replace("<\\/", "</"))
-    refs = next(n["refs"] for n in data["nodes"] if n["id"] == "u1-frame")
-    assert len(refs) == 4 and "膏体质地" in refs[2], refs
+    assert len(next(n["refs"] for n in data["nodes"] if n["id"] == "u1-frame")) == 2
+    assert len(next(n["refs"] for n in data["nodes"] if n["id"] == "u2-frame")) == 3
 
 
 def t_whole():
@@ -241,7 +248,7 @@ def t_whole():
 for name, fn in [("unit count must match the shot table", t_count), ("product never stays a slot", t_product_slots),
                  ("recipe steps, keyframe head, slot markers, voice line", t_build), ("slot stitching", t_stitch),
                  ("leftover original values are reported", t_leftover), ("save as template: keep/rename/drop slots, keep units", t_template),
-                 ("one product image by default, up to three with roles", t_product_refs),
+                 ("one product by default, two products in one shot get two images", t_multi_product),
                  ("whole-video fallback chain", t_whole)]:
     check(name, fn)
 

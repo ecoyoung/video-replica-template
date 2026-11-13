@@ -255,10 +255,10 @@ def cmd_recipe(args) -> None:
             if left:
                 (wd / "slotify_request.md").write_text(rcp.slotify_request(seen), encoding="utf-8")
                 warnings.append(f"提示词里还写着槽位原值 {left}：按 slotify_request.md 改写 vlm.json 里的 keyframe/video 后重跑 recipe")
-            roles = [x.strip() for x in str(args.product_roles or "").split(",") if x.strip()]
+            labels = [x.strip() for x in str(args.product_labels or "").split(",") if x.strip()]
             recipe = rcp.build_recipe(recipe_id, name, analysis["video"], analysis["meta"], analysis["units"], analysis["frames"],
                                       seen, analysis.get("category") or "",
-                                      product_refs=int(args.product_images or 1), product_roles=roles)
+                                      product_count=args.products, product_labels=labels)
         else:
             seen = rcp.normalize_recipe(answer)
             recipe = rcp.build_whole_recipe(recipe_id, name, analysis["video"], analysis.get("cover") or "", seen,
@@ -270,7 +270,7 @@ def cmd_recipe(args) -> None:
     write_json(existing, recipe)
     write_json(wd / "vlm.json", answer)
     out({"recipe": str(existing), "id": recipe["id"], "name": recipe["name"], "mode": recipe.get("mode", "chain"),
-         "needImage": recipe["needImage"], "productRefs": recipe.get("productRefs"), "aspectRatio": recipe["aspectRatio"],
+         "needImage": recipe["needImage"], "products": recipe.get("products") or [], "aspectRatio": recipe["aspectRatio"],
          "slots": recipe["slots"],
          "steps": [{"id": s["id"], "kind": s["kind"], "title": s["title"]} for s in recipe["steps"]], "warnings": warnings,
          "next": "检查配方没问题后跑 package，导出给执行 agent 的交付包。"})
@@ -288,7 +288,7 @@ def cmd_package(args) -> None:
         raise Fail(str(exc)) from None
     tpl = pkg["template"]
     out({"package": pkg["folder"], "zip": pkg["zip"], "id": tpl["id"], "name": tpl["name"], "needImage": tpl["needImage"],
-         "productRefs": rcp.product_ref_info(tpl),
+         "products": rcp.product_list(tpl),
          "slots": tpl["slots"], "units": len(tpl["replica"]["units"]), "duration": tpl["replica"]["duration"],
          "files": sorted(p.relative_to(pkg["folder"]).as_posix() for p in Path(pkg["folder"]).rglob("*") if p.is_file()),
          "next": "把 zip（或整个文件夹）交给执行 agent：它读 AGENT.md，按段先图生图再图生视频，最后按原片时长拼接。"})
@@ -333,9 +333,10 @@ def main() -> None:
     p.add_argument("--transcript", required=True)
     p = sub.add_parser("recipe")
     p.add_argument("workdir")
-    p.add_argument("--product-images", type=int, choices=(1, 2, 3), default=1,
-                   help="how many product images the package will ask for (1-3); more angles mean less guessing")
-    p.add_argument("--product-roles", help="comma separated roles for image 1..n, e.g. 整体外观,质地,背面")
+    p.add_argument("--products", "--product-images", dest="products", type=int, choices=(1, 2, 3), default=None,
+                   help="how many distinct products the package should expect (1-3); default: whatever the answer lists")
+    p.add_argument("--product-labels", "--product-roles", dest="product_labels",
+                   help="comma separated names for those products, e.g. 卸妆膏,化妆棉")
     p.add_argument("--vlm")
     p.add_argument("--vlm-json")
     p.add_argument("--name")

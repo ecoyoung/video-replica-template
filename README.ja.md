@@ -116,7 +116,7 @@ python3 scripts/desk.py package /tmp/demo-work --out /tmp/demo-out
 | `desk.py doctor` | 環境チェック：python、ffmpeg、使用中の検出器 |
 | `desk.py ingest VIDEO WD [--name N] [--max-units 6]` | ショット検出 → 単位化 → ファーストフレーム → `request.md` |
 | `desk.py speech WD --transcript f.json` | タイムコード付きナレーションを紐付け（srt / vtt / json / tsv） |
-| `desk.py recipe WD --vlm vlm.json [--product-images 1-3]` | 回答を検証してテンプレートを組み立てる。製品画像を 2–3 枚（正面 / 質感 / 背面）渡すと推測が減る |
+| `desk.py recipe WD --vlm vlm.json [--products 1-3]` | 回答を検証してテンプレートを組み立てる。1 ショットに製品が 2 つ写るなら、製品ごとに 1 枚ずつ参照画像を渡す |
 | `desk.py package WD --out DIR [--units 1,2] [--slots …]` | ハンドオフパッケージ + zip |
 | `desk.py status WD` | 作業ディレクトリがどこまで進んだか |
 
