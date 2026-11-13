@@ -29,7 +29,12 @@ for parent in "${targets[@]}"; do
   rm -rf "$dest"
   mkdir -p "$dest"
   # copy everything the agent needs, leave development artefacts behind
-  rsync -a --exclude '__pycache__' --exclude '.git' --exclude '*.zip' --exclude '.venv*' "$here/" "$dest/"
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a --exclude '__pycache__' --exclude '.git' --exclude '*.zip' --exclude '.venv*' "$here/" "$dest/"
+  else
+    tar -C "$here" -cf - --exclude '__pycache__' --exclude '.git' --exclude '*.zip' . | tar -C "$dest" -xf -
+  fi
+  rm -rf "$dest/__pycache__" "$dest/scripts/__pycache__" "$dest/scripts/desklib/__pycache__"
   echo "installed -> $dest"
 done
 
