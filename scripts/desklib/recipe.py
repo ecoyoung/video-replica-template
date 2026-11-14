@@ -65,9 +65,6 @@ def instructions(name: str, units: list[dict], meta: dict) -> str:
         "段里有多个镜头时按「镜头1（0.0–1.4s）：…；镜头2（1.4–3.2s）：…」逐个写，最后一句写这一段的结束状态。\n"
         "4. 片子在展示一个可以换成别家产品的商品时 needImage 为 true：产品本身只写「上传的产品」，"
         "不要写参考片里产品的颜色、包装和品牌；场景里的颜色照写。没有可替换的商品时 needImage 为 false。\n"
-        "9. 一段画面里同时出现两件以上产品（卸妆膏和化妆棉同框、双支套装并排）时，每件都单独列进 products 并写清位置；"
-        "这一段的 products 按画面从左到右把它们列全。工具会给每件产品各配一张参考图，"
-        "提示词里写「把画面里的产品换成参考图 2 / 参考图 3 的产品」。只有一件产品时 products 只写一个名字。\n"
         "5. 这条片子要做成可复用的模板：换产品时通常要跟着换的具体内容抽成 slots，最多 5 个。"
         "优先考虑：食材/配料、道具、场景/背景、人物外观、口播台词。"
         "槽名 2–4 个字（如 食材、道具、场景），default 填参考片里的原值；"
@@ -78,7 +75,10 @@ def instructions(name: str, units: list[dict], meta: dict) -> str:
         "不要把画面上的字幕当成口播。\n"
         "7. 提示词里不要字幕、花字、贴纸，也不要写分析过程。\n"
         "8. 表里每段末尾的「工具量出的画面」是逐帧量出来的运镜、明暗、冷暖，不是猜的：video 提示词的运镜照它写，"
-        "画面比它还亮/还暗、还暖/还冷时按你看到的写，但运镜不要跟它冲突。"
+        "画面比它还亮/还暗、还暖/还冷时按你看到的写，但运镜不要跟它冲突。\n"
+        "9. 一段画面里同时出现两件以上产品（卸妆膏和化妆棉同框、双支套装并排）时，每件都单独列进 products 并写清位置；"
+        "这一段的 products 按画面从左到右把它们列全。工具会给每件产品各配一张参考图，"
+        "提示词里写「把画面里的产品换成参考图 2 / 参考图 3 的产品」。只有一件产品时 products 只写一个名字。\n"
     )
 
 
@@ -156,9 +156,18 @@ def _as_shots(value) -> list[dict]:
     return shots
 
 
+def _truthy(value) -> bool:
+    """JSON true, or the string a model sometimes writes instead of it."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in ("true", "yes", "1", "需要")
+    return False
+
+
 def normalize_recipe(value: dict) -> dict:
     """vision.normalize_recipe: shared fields (desc / needImage / aspectRatio / slots) and whole-mode shots."""
-    need_image = value.get("needImage") is True
+    need_image = _truthy(value.get("needImage"))
     shots = _as_shots(value.get("shots"))
     if not shots:
         raise ValueError("模型没有拆出镜头")
@@ -271,16 +280,30 @@ def drop_product_slots(seen: dict) -> dict:
     terms = seen.get("productTerms") or []
     slots = []
     dropped_slots, dropped_items = [], []
+
+    def still_fillable(title: str, key: str, default: str) -> None:
+        """A dropped slot leaves 【title】 behind: fill it, or the executor gets a marker it cannot fill."""
+        value = default if not seen.get("needImage") else "上传的产品"
+        units = [dict(unit) for unit in seen.get("units") or []]
+        for unit in units:
+            for field in ("keyframe", "video"):
+                text = unit.get(field)
+                if text:
+                    unit[field] = text.replace(f"【{title}】", value).replace(f"【{key}】", value)
+        seen["units"] = units
+
     for slot in seen.get("slots") or []:
         title = str(slot.get("title") or "").strip()
         if title in PRODUCT_SLOT_TITLES:
             dropped_slots.append(title)
+            still_fillable(title, str(slot.get("key") or ""), str(slot.get("default") or "").strip())
             continue
         default = str(slot.get("default") or "")
         items = [x.strip() for x in re.split(ITEM_SPLIT, default) if x.strip()]
         kept = [x for x in items if not _is_product_item(x, terms)]
         if items and not kept:
             dropped_slots.append(title)
+            still_fillable(title, str(slot.get("key") or ""), "、".join(kept))
             continue
         if len(kept) != len(items):
             dropped_items.append(title)
@@ -383,9 +406,14 @@ def resolve_products(seen: dict, count: int | None = None, labels: list[str] | N
     for row in units:
         picked = []
         for name in row:
-            key = merged.get(str(name or "").strip()[:20])
+            label = str(name or "").strip()[:20]
+            key = merged.get(label)
             idx = next((i for i, p in enumerate(products) if p["key"] == key), None)
-            if idx is not None and idx not in picked:
+            if idx is None and label:
+                dropped = seen.setdefault("droppedProducts", [])  # beyond PRODUCT_MAX: say so, once
+                if label not in dropped:
+                    dropped.append(label)
+            elif idx is not None and idx not in picked:
                 picked.append(idx)
         per_unit.append(picked or [0])
     return products, per_unit
@@ -447,7 +475,8 @@ def build_recipe(recipe_id: str, name: str, video: str, meta: dict, units: list[
     if aspect not in ASPECTS:
         aspect = "9:16"
     texts = " ".join(f"{u['keyframe']} {u['video']}" for u in seen["units"])
-    used = [slot for slot in seen.get("slots") or [] if f"【{slot['title']}】" in texts]
+    used = [slot for slot in seen.get("slots") or []
+            if re.search(rf"【\s*{re.escape(slot['title'])}\s*】", texts)]
     slots = [{"key": f"s{k}", "title": slot["title"], **({"default": slot["default"]} if slot.get("default") else {})}
              for k, slot in enumerate(used, 1)]
     language = seen.get("language") or ""
@@ -463,6 +492,11 @@ def build_recipe(recipe_id: str, name: str, video: str, meta: dict, units: list[
         steps.append({"id": f"u{k}-video", "kind": "i2v", "title": f"{k}·{text['title']} {unit['duration']:.1f}s",
                       "imageFrom": "prev", "unit": k, "duration": unit["generate"], "targetDuration": unit["duration"],
                       "prompt": video_prompt(text["video"], line, voice, len(shot_products) or 1), "line": line, "aspectRatio": aspect})
+    for slot in slots:  # 【 食材 】 and 【食材】 must look the same to whoever fills them in
+        marker = re.compile(rf"【\s*{re.escape(slot['title'])}\s*】")
+        for step in steps:
+            if step.get("prompt"):
+                step["prompt"] = marker.sub(f"【{slot['title']}】", step["prompt"])
     steps.append({"id": "assemble", "kind": "assemble", "title": "按原片时间线拼接", "audio": "generated", "prompt": ""})
     return {
         "id": recipe_id, "appId": recipe_id, "name": name,
@@ -568,16 +602,6 @@ def stitch(template: str, values: dict | None, slots: list[dict] | None) -> str:
     return PLACEHOLDER.sub(replace, template or "")
 
 
-def slot_values(recipe: dict, raw: dict) -> dict:
-    """Accept values keyed by slot key (s1) or by title (食材)."""
-    out = {}
-    for slot in recipe.get("slots") or []:
-        for name in (slot.get("key"), slot.get("title")):
-            if name in raw and str(raw[name]).strip():
-                out[slot["key"]] = str(raw[name]).strip()
-    return out
-
-
 # ---------------------------------------------------------------- lines
 
 REWRITE_SYSTEM = "你是短视频口播编辑。只按要求替换内容，不改风格、不加内容。只输出一个 JSON 对象。"
@@ -668,6 +692,10 @@ def build_template(recipe: dict, job: dict | None, name: str, desc: str = "", ca
             raise TemplateError("至少保留一段")
         steps = [s for s in steps if s.get("unit") is None or int(s["unit"]) in keep]
         tpl["replica"] = {**tpl["replica"], "units": units, "duration": round(sum(float(u["duration"]) for u in units), 3)}
+        used = {key for step in steps for key in step.get("productKeys") or []}
+        kept_products = [item for item in tpl.get("products") or [] if item.get("key") in used]
+        if kept_products:  # the dropped units may have been the only ones that needed that product
+            tpl["products"] = kept_products
     tpl["steps"] = steps
     if job:
         first = next((s.get("outputUrl") for s in job.get("steps") or [] if s.get("kind") in {"i2i", "t2i"} and s.get("outputUrl")), "")

@@ -40,8 +40,10 @@ def graph(tpl: dict) -> dict:
     y = PAD_Y
     has_inputs = bool(tpl.get("needImage") or slots)
     if tpl.get("needImage"):
-        nodes.append({"id": "in-image", "kind": "image", "title": "产品图", "x": PAD_X, "y": y,
-                      "body": "执行时由用户提供（白底或干净背景的产品照）"})
+        products = rcp.product_list(tpl)
+        nodes.append({"id": "in-image", "kind": "image", "x": PAD_X, "y": y,
+                      "title": f"产品图 ×{len(products)}" if len(products) > 1 else "产品图",
+                      "body": "执行时由用户提供，每件产品一张（白底或干净背景）"})
         y += 150
     for slot in slots:
         nodes.append({"id": f"in-slot-{slot['key']}", "kind": "slot", "title": slot["title"], "x": PAD_X, "y": y,
@@ -248,8 +250,9 @@ aside .close{float:right;border:0;background:none;color:var(--muted);font-size:1
     detail.querySelector(".close").onclick = function () { detail.classList.remove("open"); Object.keys(els).forEach(function (k) { els[k].classList.remove("sel"); }); };
   }
 
-  var drag = null;
+  var drag = null, touched = false;
   stage.addEventListener("pointerdown", function (e) {
+    touched = true;
     var node = e.target.closest(".node");
     drag = node ? { id: node.dataset.id, sx: e.clientX, sy: e.clientY, ox: pos[node.dataset.id].x, oy: pos[node.dataset.id].y, moved: false }
                 : { pan: true, sx: e.clientX, sy: e.clientY, ox: view.x, oy: view.y, moved: false };
@@ -278,10 +281,10 @@ aside .close{float:right;border:0;background:none;color:var(--muted);font-size:1
 
   layout(true);
   var imgs = world.querySelectorAll("img"), pending = imgs.length;
-  function ready() { wires(); fitWidth(); }
+  function ready() { wires(); if (!touched) fitWidth(); }  // once the user pans, the late fit must not move the board
   if (!pending) ready();
   imgs.forEach(function (img) { if (img.complete) { if (--pending === 0) ready(); } else { img.addEventListener("load", function () { wires(); }); img.addEventListener("error", function () { wires(); }); } });
-  if (pending) ready();
+  if (pending) setTimeout(ready, 500);  // a frame that never fires load must not leave the board unfitted
   window.addEventListener("resize", function () { wires(); });
 })();
 </script>

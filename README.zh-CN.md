@@ -36,7 +36,7 @@
 replica-work/
 ├── analysis.json              镜头、分段、每段画面特征、取帧时间、告警
 ├── frames/u1-first.jpg …      每段的构图参考帧
-├── request.md                 给 agent 读的任务书（段表 + 8 条规则）
+├── request.md                 给 agent 读的任务书（段表 + 9 条规则）
 ├── vlm.json                   agent 的答案：标题、提示词、台词、槽位
 ├── recipe.json                配方本体
 └── export/<模板id>/           交付包
@@ -159,7 +159,7 @@ python3 scripts/desk.py package /tmp/demo-work --out /tmp/demo-out
 ## 开发
 
 ```bash
-python3 scripts/selftest.py                 # 31 项：切镜、分段、口播、语言、画面统计、槽位、配方、交付包、端到端
+python3 scripts/selftest.py                 # 29 项（装 numpy+opencv 后 37 项）：切镜、分段、口播、画面统计、槽位、配方、交付包、端到端
 python3 examples/make_demo.py               # 重新生成演示片（Pillow + ffmpeg）
 python3 -m venv .venv && .venv/bin/pip install numpy opencv-python-headless
 .venv/bin/python scripts/selftest.py        # 再跑一遍，覆盖 cv2 路径
