@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+from functools import lru_cache
 from pathlib import Path
 from typing import Iterator
 
@@ -104,21 +105,6 @@ def probe(path: str | Path) -> dict:
     }
 
 
-def seconds(path: Path) -> float:
-    proc = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
-                          capture_output=True, text=True, timeout=60)
-    try:
-        return float(proc.stdout.strip() or 0)
-    except ValueError:
-        return 0.0
-
-
-def has_audio_stream(path: Path) -> bool:
-    proc = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a", "-show_entries", "stream=index", "-of", "csv=p=0", str(path)],
-                          capture_output=True, text=True, timeout=60)
-    return bool(proc.stdout.strip())
-
-
 def scaled_size(meta: dict, width: int) -> tuple[int, int]:
     w, h = int(meta.get("width") or 0), int(meta.get("height") or 0)
     width = min(width, w) if w else width
@@ -128,11 +114,12 @@ def scaled_size(meta: dict, width: int) -> tuple[int, int]:
     return max(2, width), max(2, height)
 
 
-def _passthrough() -> list[str]:
+@lru_cache(maxsize=1)
+def _passthrough() -> tuple[str, ...]:
     out = subprocess.run(["ffmpeg", "-hide_banner", "-version"], capture_output=True, text=True).stdout
     m = re.search(r"ffmpeg version n?(\d+)\.(\d+)", out)
     major, minor = (int(m.group(1)), int(m.group(2))) if m else (7, 0)
-    return ["-fps_mode", "passthrough"] if (major, minor) >= (5, 1) else ["-vsync", "passthrough"]
+    return ("-fps_mode", "passthrough") if (major, minor) >= (5, 1) else ("-vsync", "passthrough")
 
 
 def iter_raw(path: Path, meta: dict, width: int, pix: str) -> Iterator[bytes]:

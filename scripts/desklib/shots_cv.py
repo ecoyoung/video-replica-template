@@ -77,15 +77,15 @@ def _hist(rgb: np.ndarray) -> np.ndarray:
 
 def build_track(path, meta: dict) -> Track:
     track = Track(meta.get("fps") or 30.0)
+    width, height = media.frame_size(meta, THUMB_W)  # a source narrower than THUMB_W is not upscaled
     prev_gray = None
     prev_hist = None
     prev_std = 0.0
     for rgb_bytes in media.iter_raw(path, meta, THUMB_W, "rgb24"):
         flat = np.frombuffer(rgb_bytes, dtype=np.uint8)
-        rows = max(1, flat.size // (THUMB_W * 3))
-        rgb = flat[: THUMB_W * rows * 3].reshape(rows, THUMB_W, 3)
+        rgb = flat[: width * height * 3].reshape(height, width, 3)
         gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
-        small = cv2.resize(gray, (CHECK_W, max(1, round(rows * CHECK_W / THUMB_W))),
+        small = cv2.resize(gray, (CHECK_W, max(1, round(height * CHECK_W / width))),
                            interpolation=cv2.INTER_AREA)
         track.thumb.append(small)
         hist = _hist(rgb)
@@ -288,21 +288,6 @@ def _blend_strength(track: Track, i: int, k: int) -> float:
         if burst < 1.4 * steady:
             return 0.0
     return 1.0 - resid
-
-
-def _steady_morph(track: Track, i: int, k: int) -> bool:
-    """True when the picture changes as fast just outside [i-k, i+k] as inside it: a morph, not a cut away."""
-    n = track.n
-
-    def rate(a: int, b: int) -> float | None:
-        a, b = max(0, a), min(n - 1, b)
-        if b - a < max(2, k):
-            return None
-        return _mad(track.thumb[b], track.thumb[a]) * (2 * k) / (b - a)
-
-    inside = rate(i - k, i + k)
-    around = [r for r in (rate(i - 3 * k, i - k), rate(i + k, i + 3 * k)) if r is not None]
-    return bool(inside and around and inside < 1.3 * max(around))
 
 
 def _dissolve_runs(track: Track) -> list[tuple[int, int, float, int]]:

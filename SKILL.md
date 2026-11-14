@@ -111,7 +111,7 @@ ffmpeg -v error -y -i "<参考视频>" -ac 1 -ar 16000 audio.wav
 
 ### 4. 写配方（vlm.json）
 
-读 `<WD>/request.md`——里面有序号、每段时长和镜头表，以及**8 条规则**。按它要求的结构写 `vlm.json`：
+读 `<WD>/request.md`——里面有序号、每段时长和镜头表，以及**9 条规则**。按它要求的结构写 `vlm.json`：
 
 ```json
 {"desc": "一句话", "needImage": true, "aspectRatio": "9:16",

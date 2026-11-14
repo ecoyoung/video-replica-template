@@ -122,6 +122,7 @@ def shot_profiles(path, meta: dict, rows: list[dict]) -> list[dict]:
         flow_ok = False
 
     n = len(rows)
+    width, height = media.frame_size(meta, PROFILE_W)  # a source narrower than PROFILE_W is not upscaled
     track_fps = float(meta.get("fps") or 30.0)
     frames: list[tuple[float, float, float, float]] = []   # tone per frame
     signatures: list = []                                  # for motion
@@ -133,11 +134,9 @@ def shot_profiles(path, meta: dict, rows: list[dict]) -> list[dict]:
         if flow_ok:
             import numpy as np
 
-            arr = np.frombuffer(rgb, dtype=np.uint8).reshape(-1, 3).astype(np.float32)
-            height = max(1, arr.shape[0] // PROFILE_W)
-            flat = arr[:, 0] * LUMA[0] + arr[:, 1] * LUMA[1] + arr[:, 2] * LUMA[2]
-            gray = flat.reshape(height, PROFILE_W)
-            thumbs.append(gray[:, :: max(1, PROFILE_W // MOTION_W)].astype("uint8"))
+            arr = np.frombuffer(rgb, dtype=np.uint8).reshape(height, width, 3).astype(np.float32)
+            gray = arr[..., 0] * LUMA[0] + arr[..., 1] * LUMA[1] + arr[..., 2] * LUMA[2]
+            thumbs.append(gray[:, :: max(1, width // MOTION_W)].astype("uint8"))
     if not frames:
         return [{} for _ in range(n)]
 

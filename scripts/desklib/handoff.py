@@ -39,10 +39,10 @@ def _unit_steps(tpl: dict) -> list[tuple[dict, dict, dict]]:
 def _product_input_line(items: list[dict]) -> str:
     if len(items) <= 1:
         return "**必填**，1 张，白底或干净背景的产品照效果最好"
-    listing = "、".join(f"参考图 {i + 2} = {p['label'] or '产品'}" + (f"（{p['where']}）" if p["where"] else "")
-                        for i, p in enumerate(items))
+    listing = "、".join(f"`{p['image']}` = {p['label'] or '产品'}" + (f"（{p['where']}）" if p["where"] else "")
+                        for p in items)
     return (f"**必填**，共 {len(items)} 张，是 {len(items)} 件**不同产品**（不是同一件的多个角度）：{listing}；"
-            "缺哪件，只用到它的段就先跳过，不要拿别的产品顶替")
+            "每段用哪张、排第几个参考图见第 4 节，缺哪件，只用到它的段就先跳过，不要拿别的产品顶替")
 
 
 def _product_step_lines(tpl: dict, frame: dict) -> list[str]:

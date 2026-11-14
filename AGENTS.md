@@ -20,7 +20,7 @@ No generation, no network, no API keys. `scripts/desk.py` is the only entry poin
 | `scripts/desklib/recipe.py` | prompt rules, slot normalization, template build |
 | `scripts/desklib/handoff.py` | `AGENT.md`, `template.json` handoff block, zip |
 | `scripts/desklib/flowhtml.py` | single-file draggable diagram |
-| `scripts/selftest.py` | the whole suite: 31 checks, ffmpeg fixtures generated on the fly |
+| `scripts/selftest.py` | the whole suite: 29 checks (37 with numpy + opencv), ffmpeg fixtures generated on the fly |
 | `references/` | field reference and design notes (also read by the using agent) |
 
 ## Before you claim a change works

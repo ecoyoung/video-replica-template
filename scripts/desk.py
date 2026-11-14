@@ -21,6 +21,7 @@ import json
 import re
 import shutil
 import sys
+import traceback
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -149,6 +150,20 @@ def cmd_ingest(args) -> None:
                 "video": rel(wd, video), "createdAt": rcp.now(), "warnings": warnings}
     mode = args.mode
     if mode in ("auto", "units"):
+        # 段数 x 每段上限 is a hard ceiling on the whole clip: checking it up front skips a full decode
+        # that would only end in "参考片太长".
+        cap = float(args.max_units) * plan.UNIT_MAX_S
+        try:
+            too_long = cap > 0 and float(media.probe(video).get("duration") or 0.0) > cap + 0.01
+        except (media.MediaError, OSError, ValueError):  # no ffprobe / unreadable: let the real path report it
+            too_long = False
+        if too_long:
+            reason = f"参考片太长：按镜头复刻最多 {args.max_units} 段，每段不超过 {plan.UNIT_MAX_S:.0f} 秒"
+            if mode == "units":
+                raise Fail(reason)
+            warnings.append(f"按镜头拆不了，退回整片模式：{reason}")
+            mode = "whole"
+    if mode in ("auto", "units"):
         try:
             meta, rows, detector = plan.detect_shots(video)
             units = plan.plan_units(rows, limit=args.max_units)
@@ -259,6 +274,8 @@ def cmd_recipe(args) -> None:
             recipe = rcp.build_recipe(recipe_id, name, analysis["video"], analysis["meta"], analysis["units"], analysis["frames"],
                                       seen, analysis.get("category") or "",
                                       product_count=args.products, product_labels=labels)
+            for label in seen.get("droppedProducts") or []:  # only known after the products were resolved
+                warnings.append(f"产品「{label}」没有配到参考图（最多 {rcp.PRODUCT_MAX} 件）：用到它的段会按第一件产品生成")
         else:
             seen = rcp.normalize_recipe(answer)
             recipe = rcp.build_whole_recipe(recipe_id, name, analysis["video"], analysis.get("cover") or "", seen,
@@ -358,6 +375,10 @@ def main() -> None:
     except (Fail, FileNotFoundError, media.MediaError, plan.ShotAnalysisError) as exc:
         sys.stdout.write(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False) + "\n")
         sys.exit(1)
+    except Exception as exc:  # noqa: BLE001 - the caller parses stdout; a traceback there is useless to it
+        traceback.print_exc(file=sys.stderr)
+        sys.stdout.write(json.dumps({"ok": False, "error": f"{type(exc).__name__}: {exc}"}, ensure_ascii=False) + "\n")
+        sys.exit(2)
 
 
 if __name__ == "__main__":

@@ -164,6 +164,21 @@ def t_product_slots():
     assert "产品" not in titles and titles["道具"] == "spoon", titles
     dropped = seen.get("droppedProductSlots") or {}
     assert "产品" in (dropped.get("slots") or []), dropped  # silent drops confuse people: report them
+    # a dropped slot must not leave a marker nobody can fill
+    r = build()
+    assert "【产品】" not in json.dumps(r["steps"], ensure_ascii=False), r["steps"]
+    seen = {"needImage": True, "units": [{"keyframe": "桌上放着【产品】", "video": "手拿【产品】", "products": []}],
+            "slots": [{"title": "产品", "default": "卸妆膏"}], "productTerms": ["卸妆膏"]}
+    filled = rcp.drop_product_slots(seen)
+    assert filled["units"][0]["keyframe"] == "桌上放着上传的产品", filled["units"]
+    assert filled["units"][0]["video"] == "手拿上传的产品", filled["units"]
+
+
+def t_marker_spacing():
+    answer = {**ANSWER, "slots": [{"title": "食材", "default": "banana"}]}
+    r = build({**answer, "units": [{**ANSWER["units"][0], "keyframe": "近景【 食材 】在台面"}, ANSWER["units"][1]]})
+    assert r["steps"][0]["prompt"].endswith("近景【食材】在台面"), r["steps"][0]["prompt"]
+    assert [s["title"] for s in r["slots"]] == ["食材"], r["slots"]
 
 
 def t_build():
@@ -200,6 +215,33 @@ def t_template():
     assert tpl["replica"]["duration"] == 5 and tpl["sampleUrl"] == "jobs/j1/remake.mp4" and tpl["coverUrl"] == "jobs/j1/u1-frame.png"
 
 
+def t_product_cap():
+    """A 4th product cannot get a reference image; the unit that names it must be reported, not silently p1."""
+    many = {**ANSWER, "products": [{"name": f"a{i}"} for i in (1, 2, 3, 4)],
+            "units": [{**ANSWER["units"][0], "products": ["a4"]}, ANSWER["units"][1]]}
+    seen = rcp.slotify_fallback(rcp.drop_product_slots(rcp.normalize_units_answer(many, UNITS)))
+    r = rcp.build_recipe("draft-x", "T", "source/a.mp4", {"duration": 8, "aspectRatio": "9:16"}, UNITS,
+                         ["frames/u1-first.jpg", "frames/u2-first.jpg"], seen)
+    assert len(r["products"]) == rcp.PRODUCT_MAX, r["products"]
+    assert r["steps"][0]["productKeys"] == ["p1"], r["steps"][0]
+    assert seen.get("droppedProducts") == ["a4"], seen.get("droppedProducts")
+
+
+def t_rules_order():
+    units = [{"index": 1, "start": 0.0, "end": 3.0, "duration": 3.0, "generate": 3, "shots": [{"start": 0.0, "end": 3.0, "transition": "cut"}]}]
+    text = rcp.instructions("参考片", units, {"aspectRatio": "9:16", "duration": 3.0})
+    numbers = [int(m) for m in re.findall(r"^(\d+)\. ", text, re.M)]
+    assert numbers == list(range(1, 10)), numbers
+
+
+def t_need_image_string():
+    shot = [{"kind": "i2i", "title": "a", "prompt": "p"}]
+    for value in ("true", " YES ", True):
+        assert rcp.normalize_recipe({"needImage": value, "shots": shot})["needImage"] is True, value
+    for value in ("false", "", None, 0, False):
+        assert rcp.normalize_recipe({"needImage": value, "shots": shot})["needImage"] is False, value
+
+
 def t_multi_product():
     one = build()
     assert one["products"] == [{"label": "Ninja blender", "where": "", "key": "p1"}], one["products"]
@@ -231,8 +273,18 @@ def t_multi_product():
     assert h["units"][1]["frame"]["references"] == [
         "frames/u2-first.jpg", "<productImage>", "<productImage:2>"], h["units"][1]["frame"]
     md = (folder / "AGENT.md").read_text(encoding="utf-8")
-    for needle in ("共 2 张", "参考图 2 = 卸妆膏", "参考图 3 = 化妆棉", "`<productImage:2>` → 化妆棉"):
+    for needle in ("共 2 张", "`<productImage>` = 卸妆膏", "`<productImage:2>` = 化妆棉",
+                   "- 参考图 2：`<productImage>` → 卸妆膏", "- 参考图 3：`<productImage:2>` → 化妆棉"):
         assert needle in md, needle
+    assert "参考图 2 = 卸妆膏" not in md, "the input list must not renumber products per shot"
+
+    # a unit subset drops the products only the dropped units used
+    one = handoff.build_package(wd, r, wd / "export", "只留一段", "", None, [1], None)
+    h1 = json.loads((Path(one["folder"]) / "template.json").read_text(encoding="utf-8"))["handoff"]
+    assert [p["image"] for p in h1["inputs"]["products"]] == ["<productImage>"], h1["inputs"]["products"]
+    assert h1["units"][0]["frame"]["references"] == ["frames/u1-first.jpg", "<productImage>"], h1["units"][0]["frame"]
+    md1 = (Path(one["folder"]) / "AGENT.md").read_text(encoding="utf-8")
+    assert "1 张" in md1 and "化妆棉" not in md1, md1[:400]
     page = (folder / "flow.html").read_text(encoding="utf-8")
     data = json.loads(re.search(r'<script type="application/json" id="data">(.*?)</script>', page, re.S).group(1).replace("<\\/", "</"))
     assert len(next(n["refs"] for n in data["nodes"] if n["id"] == "u1-frame")) == 2
@@ -246,7 +298,8 @@ def t_whole():
 
 
 for name, fn in [("unit count must match the shot table", t_count), ("product never stays a slot", t_product_slots),
-                 ("recipe steps, keyframe head, slot markers, voice line", t_build), ("slot stitching", t_stitch),
+                 ("recipe steps, keyframe head, slot markers, voice line", t_build),
+                 ("slot markers survive stray spaces", t_marker_spacing), ("slot stitching", t_stitch),
                  ("leftover original values are reported", t_leftover), ("save as template: keep/rename/drop slots, keep units", t_template),
                  ("one product by default, two products in one shot get two images", t_multi_product),
                  ("whole-video fallback chain", t_whole)]:
@@ -305,6 +358,9 @@ def t_package():
         pass
 
 
+check("more than 3 products are reported, not silently dropped", t_product_cap)
+check("rules: the VLM reads them 1..9 in order", t_rules_order)
+check("recipe: needImage accepts a string instead of a JSON bool", t_need_image_string)
 check("package: ASCII folder, relative paths, handoff block, AGENT.md, flow.html graph, zip, unit subset", t_package)
 
 if HAVE_FFMPEG:
@@ -317,9 +373,28 @@ if HAVE_FFMPEG:
                     "-filter_complex", "[0][1][2]concat=n=3:v=1:a=0,format=yuv420p[v]", "-map", "[v]", "-map", "3:a", "-shortest",
                     "-c:v", "libx264", "-c:a", "aac", str(video)], check=True)
 
+    def t_narrow():
+        """A source narrower than the decode width is not upscaled: the frame geometry must follow it."""
+        out = tmp / "narrow.mp4"
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=50x50:d=2:r=25",
+                        "-f", "lavfi", "-i", "color=c=yellow:s=50x50:d=2:r=25", "-filter_complex",
+                        "[0][1]concat=n=2:v=1:a=0,format=yuv420p[v]", "-map", "[v]", "-c:v", "libx264", str(out)], check=True)
+        meta = media.probe(out)
+        assert media.frame_size(meta, 160) == (50, 50), meta
+        rows = [{"index": 1, "start": 0.0, "end": 4.0, "duration": 4.0, "start_frame": 0, "end_frame": 100}]
+        prof = profile.shot_profiles(out, meta, rows)
+        assert prof and prof[0]["brightness"] > 0, prof
+
     def t_lite():
         shots = shots_lite.detect_path(video, media.probe(video))
         assert [s["start"] for s in shots] == [0.0, 3.0, 6.0], [(s["start"], s["transition_in"]) for s in shots]
+
+    def t_narrow_cv():
+        out = tmp / "narrow.mp4"
+        meta = media.probe(out)
+        shots = shots_cv.detect_path(out, meta)
+        assert len(shots) == 2 and shots[1]["start"] == 2.0, [(x["start"], x["transition_in"]) for x in shots]
+        assert all(s["duration"] > 0 for s in shots)
 
     def t_e2e():
         wd = tmp / "wd"
@@ -337,6 +412,8 @@ if HAVE_FFMPEG:
         assert d["ok"] and Path(d["zip"]).is_file() and "flow.html" in d["files"] and "reference.mp4" not in d["files"], d
         s = desk("status", wd)
         assert s["ok"] and s["recipe"]["slots"][0]["title"] == "食材" and len(s["packages"]) == 1, s
+
+    check("narrow source does not break the tone profile", t_narrow)
 
     if HAVE_CV:
         def t_cv_cuts():
@@ -368,6 +445,7 @@ if HAVE_FFMPEG:
             shots = shots_cv.detect_path(out, media.probe(out))
             assert len(shots) == 2 and shots[1]["transition_in"] == "fade", [(s["start"], s["transition_in"]) for s in shots]
 
+        check("narrow source does not break the cv2 detector", t_narrow_cv)
         check("cv2 detector finds the two hard cuts", t_cv_cuts)
         check("cv2 detector sees a dissolve as one boundary", t_cv_dissolve)
         check("cv2 detector sees a fade through black", t_cv_fade)
